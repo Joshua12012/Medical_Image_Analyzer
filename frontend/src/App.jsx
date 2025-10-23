@@ -1,0 +1,228 @@
+import { motion } from "framer-motion";
+import { useState } from "react";
+import { getAIResponse } from "./api/groq";
+import { createChat, sendMessage } from "./api/messages";
+import ChatInput from "./components/ChatInput";
+import ChatMessage from "./components/ChatMessage";
+
+function App() {
+  const [messages, setMessages] = useState([]);
+  let currentUser = null;
+  const [value, setValue] = useState("");
+
+  const [currentChatId, setCurrentChatId] = useState(null);
+
+  // async function handleSend(message) {
+  //   if (!currentChatId) {
+  //     const chat = await createChat("64f123abc567def890abcd12");
+  //     setCurrentChatId(chat._id);
+  //   }
+
+  //   // Add user message
+  //   setMessages((prev) => [...prev, { sender: "user", text: message }]);
+  //   await sendMessage(currentChatId, "user", message);
+
+  //   // Add temporary AI thinking message
+  //   setMessages((prev) => [
+  //     ...prev,
+  //     { sender: "ai", text: "AI is thinking..." },
+  //   ]);
+
+  //   // Get AI response
+  //   const aiText = await getAIResponse(message);
+
+  //   // Replace placeholder with actual AI text
+  //   setMessages((prev) =>
+  //     prev.map((msg) =>
+  //       msg.text === "AI is thinking..." ? { sender: "ai", text: aiText } : msg
+  //     )
+  //   );
+
+  //   // Send user message to backend
+
+  //   await sendMessage(currentChatId, "ai", aiText); // send AI response
+  // }
+
+  // async function handleSend(message) {
+  //   try {
+  //     // User message
+  //     setMessages((prev) => [...prev, { sender: "user", text: message }]);
+  //     console.log("Sending user message:", message);
+
+  //     // AI placeholder
+  //     setMessages((prev) => [
+  //       ...prev,
+  //       { sender: "ai", text: "AI is thinking..." },
+  //     ]);
+
+  //     // AI response
+  //     const aiText = await getAIResponse(message);
+
+  //     setMessages((prev) => {
+  //       const newMessages = [...prev];
+  //       const aiIndex = newMessages.findIndex(
+  //         (msg) => msg.text === "AI is thinking..."
+  //       );
+  //       if (aiIndex !== -1) newMessages[aiIndex].text = aiText;
+  //       return newMessages;
+  //     });
+
+  //     // Send AI response
+  //   } catch (err) {
+  //     console.error("handleSend error:", err);
+  //   }
+  // }
+
+  // async function testCreateAndPost() {
+  //   try {
+  //     // 1) create chat
+  //     const chat = await createChat("test-user-1", "Quick test");
+  //     console.log("createChat response:", chat);
+
+  //     // 2) post a message
+  //     const msg = await sendMessage(
+  //       chat._id,
+  //       "user",
+  //       "Hello from frontend test"
+  //     );
+  //     console.log("sendMessage response:", msg);
+  //   } catch (err) {
+  //     console.error("Test error:", err);
+  //   }
+  // }
+
+  async function handleSend(value) {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+
+    try {
+      let chatId = currentChatId;
+
+      // If chat doesn’t exist yet, create one with the first message as the title
+      if (!chatId) {
+        const firstMessage = trimmed;
+        const chatTitle =
+          firstMessage.length > 30
+            ? firstMessage.slice(0, 30) + "..."
+            : firstMessage;
+        const newChat = await createChat(currentUser?.id || "guest", chatTitle);
+        chatId = newChat._id;
+        setCurrentChatId(chatId);
+      }
+      setMessages((prev) => [
+        ...prev,
+        { sender: "ai", text: "AI is thinking..." },
+      ]);
+
+      // AI response
+      const aiText = await getAIResponse(trimmed);
+
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        const aiIndex = newMessages.findIndex(
+          (msg) => msg.text === "AI is thinking..."
+        );
+        if (aiIndex !== -1) newMessages[aiIndex].text = aiText;
+        return newMessages;
+      });
+      // Send the message
+      const msg = await sendMessage(chatId, "user", trimmed);
+
+      setMessages((prev) => [...prev, msg]);
+      setValue("");
+    } catch (err) {
+      console.error("Send error:", err);
+    }
+  }
+
+  //   return (
+  //     <div>
+  //       <h1>Mini Chat</h1>
+  //       <div>
+  //         {messages.map((msg, index) => (
+  //           <ChatMessage key={index} sender={msg.sender} text={msg.text} />
+  //         ))}
+  //       </div>
+  //       <div>
+  //         <button onClick={testCreateAndPost}>Run frontend → backend test</button>
+  //       </div>
+  //       <ChatInput onSend={handleSend} />
+  //     </div>
+  //   );
+  // }
+  // return (
+  //   <div className="flex flex-col min-h-screen min-w-screen bg-gray-50 text-gray-900 font-sans">
+  //     <header className="bg-white shadow-md p-4 flex justify-center">
+  //       <h1 className="text-2xl font-semibold text-gray-800">Mini Chat</h1>
+  //     </header>
+
+  //     <main className="flex-1 overflow-y-auto p-4 space-y-2">
+  //       {messages.map((msg, index) => (
+  //         <motion.div
+  //           key={index}
+  //           initial={{ opacity: 0, y: 10 }}
+  //           animate={{ opacity: 1, y: 0 }}
+  //           transition={{ duration: 0.3 }}
+  //         >
+  //           <ChatMessage sender={msg.sender} text={msg.text} />
+  //         </motion.div>
+  //       ))}
+  //     </main>
+
+  //     <div className="p-4 flex flex-col space-y-2 bg-white shadow-t-md">
+  //       <ChatInput onSend={handleSend} />
+  //     </div>
+  //   </div>
+  // );
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-stretch">
+      {/* Center column container */}
+      <div className="mx-auto w-full max-w-3xl flex flex-col h-screen">
+        {/* Header */}
+        <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full  from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">
+              MC
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-slate-800">
+                Mini Chat
+              </h1>
+              <div className="text-xs text-slate-500">
+                Medical assistant • private
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Messages */}
+        <main className="flex-1 overflow-auto px-4 py-6 from-white to-slate-50">
+          <div className="flex flex-col gap-3">
+            <AnimatePresence initial={false}>
+              {messages.map((msg, i) => (
+                <motion.div
+                  key={i}
+                  initial="hidden"
+                  animate="show"
+                  exit="hidden"
+                  variants={msgVariants}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                >
+                  <ChatMessage sender={msg.sender} text={msg.text} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </main>
+
+        {/* Input area (visually centered, constrained width) */}
+        <div className="bg-white/80 border-t border-slate-200 p-4">
+          <div className="mx-auto w-full max-w-2xl">
+            <ChatInput onSend={handleSend} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+export default App;
