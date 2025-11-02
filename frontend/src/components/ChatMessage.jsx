@@ -10,7 +10,7 @@ function ChatMessage({ sender, text }) {
       <div
         className={`max-w-xs p-3 rounded-lg shadow ${
           sender
-            ? "bg-blue-600 text-white rounded-br-none"
+            ? "bg-blue-600 text-black rounded-br-none"
             : "bg-gray-200 text-gray-900 rounded-bl-none"
         }`}
       >

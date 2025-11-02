@@ -29,7 +29,7 @@ function ChatInput({ onSend }) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Type your message..."
-        className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+        className="flex-1 px-4 py-2 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
       />
       <motion.button
         onClick={handleSend}

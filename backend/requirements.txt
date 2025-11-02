@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+motor            # async MongoDB driver
+python-dotenv    # optional, for .env loading
+pydantic
+dotenv
+requests
+pymongo
