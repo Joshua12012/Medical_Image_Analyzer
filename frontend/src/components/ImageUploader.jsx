@@ -46,9 +46,10 @@ export default function ImageUploader({
       <button
         onClick={openPicker}
         type="button"
-        className="p-3 rounded-full bg-blue-500 hover:bg-blue-600 transition duration-200 flex items-center justify-center"
+        className="p-2 rounded-full hover:opacity-90 transition disabled:opacity-50"
+        style={{ backgroundColor: "#ADD8E6" }}
       >
-        <ImageIcon className="w-5 h-5 text-black" />
+        <ImageIcon className="w-5 h-5 text-white" />
       </button>
     </>
   );

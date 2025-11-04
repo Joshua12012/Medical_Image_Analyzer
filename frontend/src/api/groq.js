@@ -47,14 +47,14 @@
 //     throw err;
 //   }
 // }
-export async function getAIResponse(userId, prompt) {
-  const res = await fetch("http://localhost:5000/api/ai-response", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, prompt }),
-  });
-  const data = await res.json();
-  const aiText = data?.response || "No response received";
-  // console.log("Server response:", data);
-  return aiText;
-}
+// export async function getAIResponse(userId, prompt) {
+//   const res = await fetch("http://localhost:5000/api/ai-response", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify({ userId, prompt }),
+//   });
+//   const data = await res.json();
+//   const aiText = data?.response || "No response received";
+//   // console.log("Server response:", data);
+//   return aiText;
+// }

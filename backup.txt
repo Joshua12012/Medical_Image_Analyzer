@@ -756,3 +756,306 @@ const ImageUploader = ({userId, prompt, onResult}) => {
 }
 
 export default ImageUploader
+
+
+/// fastapi ("/api/ai-response) (v1)
+# @app.post("/api/ai-response")
+# async def get_ai_response(req: ChatRequest):
+#     headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+#     payload = {
+#         "model": "groq/compound-mini",
+#         "messages": [{"role": "user", "content": req.prompt}],
+#     }
+
+#     response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+#     data = response.json()
+#     text = data["choices"][0]["message"]["content"]
+
+#   # Find user's chat document, or create if not exists
+#     existing_chat = await db["chatMessages"].find_one({"userId": req.userId})
+
+#     if not existing_chat:
+#         # create new document
+#         chat_doc = {
+#             "chat_id": str(uuid.uuid4()),
+#             "userId": req.userId,
+#             "messages": [{"prompt": req.prompt, "response": text}]
+#         }
+#         await db["chatMessages"].insert_one(chat_doc)
+#     else:
+#         # append to existing document
+#         await db["chatMessages"].update_one(
+#             {"userId": req.userId},
+#             {"$push": {"messages": {"prompt": req.prompt, "response": text}}}
+#         )
+#     return {"userId": req.userId, "prompt": req.prompt, "response": text}
+
+
+
+/// fastapi ("/api/ai-response) (v2)
+# @app.post("/api/ai-response")
+# async def get_ai_response(req: ChatRequest):
+#     headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+#     payload = {
+#         "model": "groq/compound-mini",
+#         "messages": [{"role": "user", "content": req.prompt}],
+#     }
+
+#     response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+#     data = response.json()
+
+#     if "choices" not in data or len(data["choices"]) == 0:
+#         raise HTTPException(status_code=502, detail="Groq API error: invalid response")
+
+#     text = data["choices"][0]["message"]["content"]
+
+#     # Get or create chat session
+#     if req.chat_id:
+#         chat = await db["chatSessions"].find_one({"chat_id": req.chat_id})
+#     else:
+#         chat = None
+
+#     if not chat:
+#         # Create a new chat session if chat_id not found
+#         chat_id = str(uuid.uuid4())
+#         chat_doc = {
+#             "chat_id": chat_id,
+#             "userId": req.userId,
+#             "title": req.prompt[:30] + ("..." if len(req.prompt) > 30 else ""),
+#             "messages": [{"prompt": req.prompt, "response": text, "timestamp": datetime.utcnow()}],
+#             "created_at": datetime.utcnow(),
+#             "updated_at": datetime.utcnow(),
+#         }
+#         await db["chatSessions"].insert_one(chat_doc)
+#         return {"chat_id": chat_id, "response": text}
+#     # Push message to existing chat
+#     await db["chatSessions"].update_one(
+#         {"chat_id": req.chat_id},
+#         {
+#             "$push": {
+#                 "messages": {
+#                     "prompt": req.prompt,
+#                     "response": text,
+#                     "timestamp": datetime.utcnow(),
+#                 }
+#             },
+#             "$set": {"updated_at": datetime.utcnow()},
+#         },
+#     )
+#     return {"chat_id": req.chat_id, "response": text}
+
+
+//app.jsx(side bar code)
+
+<div className="flex h-screen">
+          <Sidebar
+            chats={chats}
+            // onSelectChat={handleSelectChat}
+            onNewChat={handleNewChat}
+            selectedId={currentChatId}
+          />
+
+          {/* Messages Area */}
+          <main className="flex-1 overflow-y-auto px-4 py-6">
+            <div className="max-w-4xl mx-auto space-y-6">
+              {messages.length === 0 && !isTyping && (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl text-white">
+                    💬
+                  </div>
+                  <h2 className="text-xl font-semibold text-slate-700 mb-2">
+                    Start a conversation
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Ask me anything about health and wellness
+                  </p>
+                </div>
+              )}
+
+              <AnimatePresence mode="popLayout">
+                {messages.map((msg, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.28, ease: "easeOut" }}
+                    className={`flex gap-3 ${
+                      msg.sender === "user" ? "flex-row-reverse" : "flex-row"
+                    }`}
+                  >
+                    <div
+                      className="flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-white"
+                      style={{
+                        background:
+                          msg.sender === "user"
+                            ? "linear-gradient(90deg,#334155,#0ea5e9)"
+                            : "linear-gradient(90deg,#06b6d4,#7c3aed)",
+                      }}
+                    >
+                      {msg.sender === "user" ? "You" : "AI"}
+                    </div>
+
+                    <div
+                      className={`max-w-[85%] inline-block px-4 py-3 rounded-2xl shadow-sm ${
+                        msg.sender === "user"
+                          ? "bg-gradient-to-r bg-blue-300 text-white"
+                          : "bg-white text-slate-800 border border-slate-200/60"
+                      }`}
+                    >
+                      {msg.imageUrl && (
+                        <img
+                          src={msg.imageUrl}
+                          alt="uploaded"
+                          className="max-w-full rounded mb-2"
+                        />
+                      )}
+                      <div className="prose prose-sm max-w-none text-sm leading-relaxed text-slate-800">
+                        {msg.sender === "ai" ? (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                          >
+                            {msg.text}
+                          </ReactMarkdown>
+                        ) : (
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                            {msg.text}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {isTyping && (
+                <div className="flex gap-3 items-center">
+                  <div className="w-8 h-8 rounded-md bg-gradient-to-br from-blue-500 to-indigo-600" />
+                  <div className="bg-white border border-slate-200/60 rounded-2xl px-4 py-3 shadow-sm">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse delay-200" />
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse delay-400" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </main>
+
+          {/* Input area */}
+          <div className="flex-shrink-0 px-4 pb-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center">
+                {/* Rounded input row containing icon, input and send button */}
+                <div className="flex items-center w-full bg-white rounded-2xl border border-slate-300 shadow-lg px-3 py-2">
+                  {/* Left: icon button (file picker) */}
+                  <div className="flex items-center">
+                    <ImageUploader
+                      onFileSelect={handleImageUpload}
+                      previewUrl={previewUrl}
+                    />
+                  </div>
+
+                  {/* Middle: text input (flex-1 so it takes remaining space) */}
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Ask me anything..."
+                    disabled={isTyping}
+                    className="flex-1 ml-3 mr-3 py-2 text-black bg-transparent focus:outline-none text-sm"
+                  />
+
+                  {/* Optional: show tiny thumbnail inside the row when preview exists */}
+                  {previewUrl && (
+                    <img
+                      src={previewUrl}
+                      alt="preview"
+                      className="w-10 h-10 rounded-md object-cover mr-3 border"
+                    />
+                  )}
+
+                  {/* Right: send button */}
+                  <button
+                    type="submit"
+                    className="p-2 rounded-full bg-green-500 hover:bg-green-600 transition"
+                  >
+                    <Send className="w-5 h-5 text-black" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+//api/ai-response
+
+# @app.post("/api/ai-response")
+# async def get_ai_response(req: ChatRequest):
+#     headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+#     payload = {
+#         "model": "groq/compound-mini",
+#         "messages": [{"role": "user", "content": req.prompt}],
+#     }
+
+#     # Generate the AI response
+#     response = requests.post(
+#         "https://api.groq.com/openai/v1/chat/completions",
+#         headers=headers, json=payload
+#     )
+#     data = response.json()
+#     ai_text = data["choices"][0]["message"]["content"]
+
+#     # Find if user already has an active chat
+#     existing_chat = await db["chatMessages"].find_one({"userId": req.userId})
+
+#     # === Create new chat with AI-generated title ===
+#     if not existing_chat:
+#         # Generate a short title using LLM
+#         title_prompt = f"Summarize this chat into a 1-2 word title: '{req.prompt}'. Only return the title text, nothing else."
+#         title_payload = {
+#             "model": "groq/compound-mini",
+#             "messages": [{"role": "user", "content": title_prompt}],
+#         }
+#         title_resp = requests.post(
+#             "https://api.groq.com/openai/v1/chat/completions",
+#             headers=headers,
+#             json=title_payload
+#         )
+#         title_data = title_resp.json()
+#         chat_title = title_data["choices"][0]["message"]["content"].strip()
+
+#         # Make sure title is unique for this user
+#         existing_titles = await db["chatMessages"].find({"userId": req.userId}, {"title": 1}).to_list(None)
+#         existing_titles = [chat.get("title", "").lower() for chat in existing_titles]
+#         if chat_title.lower() in existing_titles:
+#             suffix = 2
+#             base_title = chat_title
+#             while f"{base_title} {suffix}".lower() in existing_titles:
+#                 suffix += 1
+#             chat_title = f"{base_title} {suffix}"
+
+#         # Create the new chat document
+#         chat_doc = {
+#             "chat_id": str(uuid.uuid4()),
+#             "userId": req.userId,
+#             "title": chat_title,
+#             "messages": [{"prompt": req.prompt, "response": ai_text}],
+#         }
+#         await db["chatMessages"].insert_one(chat_doc)
+
+#     else:
+#         # Just append to existing chat
+#         await db["chatMessages"].update_one(
+#             {"userId": req.userId},
+#             {"$push": {"messages": {"prompt": req.prompt, "response": ai_text}}}
+#         )
+
+#     return {
+#         "userId": req.userId,
+#         "prompt": req.prompt,
+#         "response": ai_text,
+#     }
