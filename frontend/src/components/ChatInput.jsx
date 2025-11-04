@@ -1,45 +1,38 @@
-import { motion } from "framer-motion";
 import { useState } from "react";
 
-function ChatInput({ onSend }) {
-  const [value, setValue] = useState("");
+function ChatInput({ onSend, isTyping }) {
+  const [prompt, setPrompt] = useState("");
+  const [file, setFile] = useState(null);
 
-  function handleSend() {
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    onSend(trimmed); // pass it up to App.jsx
-    setValue(""); // clear input after sending
-  }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSend(prompt.trim(), file);
+    setPrompt("");
+    setFile(null);
+  };
 
-  // return (
-  //   <div>
-  //     <input
-  //       type="text"
-  //       value={value}
-  //       onChange={(e) => setValue(e.target.value)}
-  //       placeholder="Type your message..."
-  //     />
-  //     <button onClick={handleSend}>Send</button>
-  //   </div>
-  // );
   return (
-    <div className="flex space-x-2">
+    <form onSubmit={handleSubmit} className="p-4 bg-white border-t flex flex-col sm:flex-row gap-2">
       <input
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Type your message..."
-        className="flex-1 px-4 py-2 rounded-lg border text-black border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+        type="file"
+        accept="image/*"
+        onChange={(e) => setFile(e.target.files[0])}
+        className="sm:w-1/4 text-sm"
       />
-      <motion.button
-        onClick={handleSend}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+      <textarea
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder="Type your message..."
+        className="flex-grow p-2 border rounded"
+      />
+      <button
+        type="submit"
+        disabled={isTyping}
+        className="px-4 py-2 bg-blue-600 text-white rounded"
       >
-        Send
-      </motion.button>
-    </div>
+        {isTyping ? "Sending..." : "Send"}
+      </button>
+    </form>
   );
 }
 

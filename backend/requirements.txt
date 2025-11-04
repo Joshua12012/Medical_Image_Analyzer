@@ -6,3 +6,5 @@ pydantic
 dotenv
 requests
 pymongo
+httpx
+ipykernel

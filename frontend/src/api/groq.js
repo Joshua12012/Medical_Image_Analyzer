@@ -55,6 +55,6 @@ export async function getAIResponse(userId, prompt) {
   });
   const data = await res.json();
   const aiText = data?.response || "No response received";
-  console.log("Server response:", data);
+  // console.log("Server response:", data);
   return aiText;
 }
