@@ -30,7 +30,6 @@ function App() {
   const [currentChatId, setCurrentChatId] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
 
-
   // load chats once on mount
   useEffect(() => {
     loadChats();
@@ -132,7 +131,7 @@ function App() {
     //create a new chat if it doesnt exist
     let activeChatId = currentChatId;
 
-    // 1️⃣ If no chat exists, create one first
+    // 1.If no chat exists, create one first
     if (!activeChatId) {
       try {
         const res = await fetch("http://localhost:5000/api/new-chat", {
@@ -201,8 +200,6 @@ function App() {
           ? `${BACKEND}${data.file_meta.url}`
           : null;
 
-        
-
         setMessages((prev) => [...prev, { sender: "ai", text: data.response }]);
 
         // If backend returns a new title for this chat, update sidebar
@@ -262,7 +259,7 @@ function App() {
 
   return (
     <div
-      className="flex h-screen  bg-gradient-to-br from-amber-50 via-white to-blue-50"
+      className="flex h-screen  bg-linear-to-br from-amber-50 via-white to-blue-50"
       style={{ colorScheme: "light" }}
     >
       {/* ─── Sidebar ─── */}
@@ -281,7 +278,7 @@ function App() {
             {messages.length === 0 && !isTyping && (
               <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg text-white text-3xl">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg text-white text-3xl">
                     💬
                   </div>
                   <h2 className="text-2xl font-semibold text-slate-700 mb-2">
@@ -309,10 +306,10 @@ function App() {
                 >
                   {/* Avatar */}
                   <div
-                    className={`flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold text-white shadow-sm ${
+                    className={`shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold text-white shadow-sm ${
                       msg.sender === "user"
                         ? "bg-blue-400"
-                        : "bg-gradient-to-br from-indigo-500 to-purple-500"
+                        : "bg-linear-to-br from-indigo-500 to-purple-500"
                     }`}
                     style={
                       msg.sender === "user"
@@ -367,7 +364,7 @@ function App() {
             {/* Typing Indicator */}
             {isTyping && (
               <div className="flex gap-3 items-center">
-                <div className="w-8 h-8 rounded-md bg-gradient-to-br from-blue-500 to-indigo-600" />
+                <div className="w-8 h-8 rounded-md bg-linear-to-br from-blue-500 to-indigo-600" />
                 <div className="bg-white border border-slate-200/60 rounded-2xl px-4 py-3 shadow-sm">
                   <div className="flex gap-1">
                     <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse" />
@@ -381,7 +378,7 @@ function App() {
         </main>
 
         {/* ─── Input Area - CENTERED ─── */}
-        <footer className="flex-shrink-0 px-6 pb-6 pt-4 border-t border-slate-200/60 bg-white/40 backdrop-blur-md">
+        <footer className="shrink-0 px-6 pb-6 pt-4 border-t border-slate-200/60 bg-white/40 backdrop-blur-md">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center bg-white rounded-2xl border border-slate-300 shadow-md px-3 py-2">
               {/* Image Upload */}
