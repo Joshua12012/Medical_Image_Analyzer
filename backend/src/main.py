@@ -1,6 +1,7 @@
 from fastapi import FastAPI,HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import requests, os
 from dotenv import load_dotenv
@@ -12,6 +13,10 @@ from bson import ObjectId
 load_dotenv(override=True)
 
 app = FastAPI(title="Chatbot API")
+
+
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 #cors setup
 
@@ -53,15 +58,24 @@ class ImgRequest(BaseModel):
     image_url: str
 
 
+# def serialize_chat(chat):
+#     """Convert MongoDB document ObjectIds to strings for JSON serialization."""
+#     if not chat:
+#         return None
+#     chat["_id"] = str(chat["_id"])
+#     for msg in chat.get("messages", []):
+#         if "_id" in msg and isinstance(msg["_id"], ObjectId):
+#             msg["_id"] = str(msg["_id"])
+#     return chat
+
 def serialize_chat(chat):
-    """Convert MongoDB document ObjectIds to strings for JSON serialization."""
-    if not chat:
-        return None
-    chat["_id"] = str(chat["_id"])
-    for msg in chat.get("messages", []):
-        if "_id" in msg and isinstance(msg["_id"], ObjectId):
-            msg["_id"] = str(msg["_id"])
-    return chat
+    return {
+        "chat_id": chat.get("chat_id"),
+        "userId": chat.get("userId"),
+        "title": chat.get("title"),
+        "messages": chat.get("messages", []),
+        "created_at": str(chat.get("created_at")) if chat.get("created_at") else None
+    }
 
 
 @app.get("/test")
@@ -108,11 +122,15 @@ async def get_user_chats(userId: str):
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.get("/api/chat/{chat_id}")
-async def get_chat(chat_id:str):
-    chat = await db["chatMessages"].find_one({"user":chat_id})
-    if not chat:
-        raise HTTPException(status_code = 404, detail = "Chat not found")
-    return serialize_chat(chat)
+async def get_chat_messages(chat_id: str):
+    try:
+        chat = await db["chatMessages"].find_one({"chat_id": chat_id})
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat not found")
+        return serialize_chat(chat)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/search-chats/{userId}")
 async def search_chats(userId: str, q: str):
@@ -368,3 +386,11 @@ def get_uploaded_image(filename: str):
     if not os.path.isfile(path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path)
+
+@app.post("/upload-image/")
+async def upload_image(file: UploadFile):
+    UPLOAD_FOLDER = "uploads"
+    file_path = f"{UPLOAD_FOLDER}/{file.filename}"
+    with open(file_path, "wb") as f:
+        f.write(await file.read())
+    return {"filename": file.filename, "url": f"/uploads/{file.filename}"}

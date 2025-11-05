@@ -23,7 +23,7 @@ function ChatInput({ onSend, isTyping }) {
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder="Type your message..."
-        className="flex-grow p-2 border rounded"
+        className="grow p-2 border rounded"
       />
       <button
         type="submit"

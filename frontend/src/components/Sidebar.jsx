@@ -12,7 +12,7 @@ export default function Sidebar({
       <button
         onClick={onNewChat}
         className="p-2 rounded-full hover:opacity-90 transition disabled:opacity-50"
-        style={{ backgroundColor: "#ADD8E6" }}
+        style={{ backgroundColor: "#0CE22A" }}
       >
         <motion.div
           key={chats.chat_id}
@@ -33,6 +33,7 @@ export default function Sidebar({
         ) : (
           chats.map((c) => (
             <button
+              style={{ backgroundColor: "#ADD8E6" }}
               key={c.chat_id || c._id || JSON.stringify(c)}
               onClick={() => onSelectChat(c.chat_id)}
               className={`w-full text-left p-3 rounded-md transition hover:bg-slate-100 ${

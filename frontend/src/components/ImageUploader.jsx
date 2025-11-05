@@ -1,8 +1,8 @@
-// components/ImageUploader.jsx
+// components/ImageUpRendersx
 import { ImageIcon } from "lucide-react";
 import React from "react";
 
-export default function ImageUploader({
+export default function ImageRender({
   onFileSelect,
   previewUrl = null,
   accept = "image/*",
@@ -47,7 +47,7 @@ export default function ImageUploader({
         onClick={openPicker}
         type="button"
         className="p-2 rounded-full hover:opacity-90 transition disabled:opacity-50"
-        style={{ backgroundColor: "#ADD8E6" }}
+        style={{ backgroundColor: "#6891FA" }}
       >
         <ImageIcon className="w-5 h-5 text-white" />
       </button>

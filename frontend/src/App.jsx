@@ -28,7 +28,8 @@ function App() {
   const [file, setFile] = useState(null); // <--- added file state
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedChatId, setSelectedChatId] = useState(null);
+  const [currentChatMessages, setCurrentChatMessages] = useState(null);
 
   // load chats once on mount
   useEffect(() => {
@@ -49,6 +50,47 @@ function App() {
       // keep UI tolerant (show empty list)
     }
   }
+
+  async function handleSelectChat(currentChatId) {
+    try {
+      setCurrentChatId(currentChatId);
+      console.log(currentChatId);
+      setMessages([]); // optional clear
+
+      const res = await fetch(
+        `http://localhost:5000/api/chat/${currentChatId}`
+      );
+      // if (!res.ok) throw new Error("Failed to fetch chat data");
+
+      const chat = await res.json();
+      console.log("Loaded chat:", chat);
+
+      // Normalize messages into your UI format
+      const formatted = (chat.messages || []).flatMap((m) => {
+        const arr = [];
+        if (m.prompt)
+          arr.push({
+            sender: "user",
+            text: m.prompt,
+            imageUrl: m.imageUrl || null,
+          });
+        if (m.response) arr.push({ sender: "ai", text: m.response });
+        return arr;
+      });
+
+      setMessages(formatted);
+
+      // Update sidebar immediately
+      setChats((prev) =>
+        prev.map((c) =>
+          c.chat_id === chat.chat_id ? { ...c, title: chat.title } : c
+        )
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   // call when user clicks on new chat
   async function handleNewChat() {
     try {
@@ -64,14 +106,14 @@ function App() {
       setCurrentChatId(data.chat_id); // ensure next messages go to this chat
       setMessages([]);
       setChats((prev) => [data, ...prev]); // add to sidebar
-
+      console.log(data);
       console.log("New chat created:", data.chat_id);
     } catch (err) {
       console.error("Error creating chat:", err);
     }
   }
 
-  const userId = "abc1234";
+  const userId = "abc1";
 
   // handle Enter key
   const handleKeyPress = (e) => {
@@ -176,15 +218,15 @@ function App() {
     try {
       if (file) {
         // send image+prompt to analyze-image-text endpoint
-        const form = new FormData();
-        form.append("userId", userId);
-        form.append("prompt", trimmed);
-        form.append("chat_id", currentChatId || "");
-        if (selectedImage) form.append("image", selectedImage);
+        const formData = new FormData();
+        formData.append("userId", userId); // must match backend name
+        formData.append("prompt", input); // must match backend name
+        formData.append("chat_id", currentChatId || ""); // optional
+        formData.append("image", file); // must exist
 
         const res = await fetch(`${BACKEND}/api/analyze-image-text`, {
           method: "POST",
-          body: form,
+          body: formData,
         });
 
         if (!res.ok) {
@@ -199,8 +241,6 @@ function App() {
           : data.file_meta?.url
           ? `${BACKEND}${data.file_meta.url}`
           : null;
-
-        setMessages((prev) => [...prev, { sender: "ai", text: data.response }]);
 
         // If backend returns a new title for this chat, update sidebar
         if (data.title) {
@@ -264,7 +304,8 @@ function App() {
     >
       {/* ─── Sidebar ─── */}
       <Sidebar
-        chats={chats}
+        chats={[...chats]}
+        onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
         selectedId={currentChatId}
         className="w-72 border-r border-slate-200/60 bg-white/50 backdrop-blur-lg"
@@ -392,7 +433,6 @@ function App() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
                 placeholder="Ask me anything..."
                 disabled={isTyping}
                 className="flex-1 ml-3 mr-3 py-2 text-slate-800 bg-transparent focus:outline-none text-sm placeholder-slate-400"
