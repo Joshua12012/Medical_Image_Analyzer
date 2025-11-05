@@ -1059,3 +1059,358 @@ export default ImageUploader
 #         "prompt": req.prompt,
 #         "response": ai_text,
 #     }
+
+
+
+
+// // src/components/Sidebar.jsx
+// import { motion } from "framer-motion";
+
+// export default function Sidebar({
+//   chats = [],
+//   onSelectChat,
+//   onNewChat,
+//   selectedId,
+// }) {
+//   return (
+//     <aside className="w-72 bg-white/90 border-r border-slate-200 p-4 flex flex-col">
+//       <button
+//         onClick={onNewChat}
+//         className="p-2 rounded-full hover:opacity-90 transition disabled:opacity-50"
+//         style={{ backgroundColor: "#0CE22A" }}
+//       >
+//         <motion.div
+//           key={chats.chat_id}
+//           initial={{ opacity: 0 }}
+//           animate={{ opacity: 1 }}
+//           exit={{ opacity: 0 }}
+//           transition={{ duration: 0.3 }}
+//         >
+//           {chats.title || "New Chat"}
+//         </motion.div>
+//       </button>
+
+//       <div className="text-xs text-slate-500 mb-3">Your chats</div>
+
+//       <div className="flex-1 overflow-y-auto space-y-2">
+//         {chats.length === 0 ? (
+//           <div className="text-sm text-slate-400">No chats yet — start one</div>
+//         ) : (
+//           chats.map((c) => (
+//             <button
+//               style={{ backgroundColor: "#ADD8E6" }}
+//               key={c.chat_id || c._id || JSON.stringify(c)}
+//               onClick={() => onSelectChat(c.chat_id)}
+//               className={`w-full text-left p-3 rounded-md transition hover:bg-slate-100 ${
+//                 selectedId === c.chat_id
+//                   ? "bg-slate-100 border-l-4 border-blue-600"
+//                   : ""
+//               }`}
+//             >
+//               <div className="truncate font-medium text-sm">
+//                 {c.title || c.prompt?.slice(0, 30) || "Untitled chat"}
+//               </div>
+//               <div className="text-xs text-slate-400 mt-1">
+//                 {/* optional subtitle */}
+//               </div>
+//             </button>
+//           ))
+//         )}
+//       </div>
+//     </aside>
+//   );
+// }
+
+
+
+
+//2
+
+// import { useState } from "react";
+// import { motion, AnimatePresence } from "framer-motion";
+// import { ChevronLeft, ChevronRight } from "lucide-react";
+
+// export default function Sidebar({
+//   chats = [],
+//   onSelectChat,
+//   onNewChat,
+//   selectedId,
+// }) {
+//   const [isCollapsed, setIsCollapsed] = useState(false);
+
+//   return (
+//     <motion.aside
+//       animate={{ width: isCollapsed ? "3rem" : "18rem" }}
+//       transition={{ duration: 0.3, ease: "easeInOut" }}
+//       className="relative bg-white/90 border-r border-slate-200 p-3 flex flex-col overflow-hidden"
+//     >
+//       {/* Toggle collapse button */}
+//       <button
+//         onClick={() => setIsCollapsed((prev) => !prev)}
+//         className="absolute -right-3 top-4 z-10 bg-white border border-slate-300 rounded-full p-1 shadow-sm hover:scale-105 transition"
+//       >
+//         {isCollapsed ? (
+//           <ChevronRight className="w-4 h-4 text-slate-600" />
+//         ) : (
+//           <ChevronLeft className="w-4 h-4 text-slate-600" />
+//         )}
+//       </button>
+
+//       <AnimatePresence>
+//         {!isCollapsed && (
+//           <motion.div
+//             key="sidebar-content"
+//             initial={{ opacity: 0 }}
+//             animate={{ opacity: 1 }}
+//             exit={{ opacity: 0 }}
+//             transition={{ duration: 0.2 }}
+//             className="flex flex-col flex-1"
+//           >
+//             {/* New Chat button */}
+//             <button
+//               onClick={onNewChat}
+//               className="p-2 mb-3 rounded-full hover:opacity-90 transition disabled:opacity-50"
+//               style={{ backgroundColor: "#0CE22A" }}
+//             >
+//               New Chat
+//             </button>
+
+//             <div className="text-xs text-slate-500 mb-3">Your chats</div>
+
+//             <div className="flex-1 overflow-y-auto space-y-2">
+//               {chats.length === 0 ? (
+//                 <div className="text-sm text-slate-400">
+//                   No chats yet — start one
+//                 </div>
+//               ) : (
+//                 chats.map((c) => (
+//                   <button
+//                     key={c.chat_id || c._id || JSON.stringify(c)}
+//                     onClick={() => onSelectChat(c.chat_id)}
+//                     className={`w-full text-left p-3 rounded-md transition hover:bg-slate-100 ${
+//                       selectedId === c.chat_id
+//                         ? "bg-slate-100 border-l-4 border-blue-600"
+//                         : ""
+//                     }`}
+//                     style={{ backgroundColor: "#ADD8E6" }}
+//                   >
+//                     <div className="truncate font-medium text-sm">
+//                       {c.title || c.prompt?.slice(0, 30) || "Untitled chat"}
+//                     </div>
+//                   </button>
+//                 ))
+//               )}
+//             </div>
+//           </motion.div>
+//         )}
+//       </AnimatePresence>
+//     </motion.aside>
+//   );
+// }
+
+
+//3
+
+// // src/components/Sidebar.jsx
+// import { useState } from "react";
+// import { motion, AnimatePresence } from "framer-motion";
+// import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+
+// export default function Sidebar({ chats = [], onSelectChat, onNewChat, selectedId }) {
+//   const [isOpen, setIsOpen] = useState(true);
+
+//   // smooth staggered dropdown animation
+//   const listVariants = {
+//     open: {
+//       opacity: 1,
+//       height: "auto",
+//       transition: {
+//         when: "beforeChildren",
+//         staggerChildren: 0.05,
+//         duration: 0.4,
+//         ease: "easeOut",
+//       },
+//     },
+//     closed: {
+//       opacity: 0,
+//       height: 0,
+//       transition: {
+//         when: "afterChildren",
+//         duration: 0.3,
+//         ease: "easeIn",
+//       },
+//     },
+//   };
+
+//   const itemVariants = {
+//     open: { opacity: 1, y: 0 },
+//     closed: { opacity: 0, y: -10 },
+//   };
+
+//   const getId = (c) =>
+//     c?.chat_id ??
+//     (typeof c?._id === "string" ? c._id : c?._id?.$oid) ??
+//     c?.id ??
+//     null;
+
+// return (
+//   <aside className="w-72 bg-white/80 backdrop-blur-md p-4 flex flex-col transition-all duration-500">
+//     {/* Header */}
+//     <div className="flex items-center justify-between mb-3">
+//       <button
+//         onClick={() => setIsOpen((prev) => !prev)}
+//         className="flex items-center gap-1 text-slate-700 hover:text-slate-900 transition font-semibold"
+//       >
+//         {isOpen ? (
+//           <ChevronDown className="w-5 h-5" />
+//         ) : (
+//           <ChevronRight className="w-5 h-5" />
+//         )}
+//         <span>Your Chats</span>
+//       </button>
+
+//       <button
+//         onClick={onNewChat}
+//         className="p-2 rounded-full bg-linear-to-br from-blue-500 to-indigo-500 text-white shadow hover:scale-[1.05] transition"
+//         title="Start a new chat"
+//       >
+//         <Plus className="w-4 h-4" />
+//       </button>
+//     </div>
+
+//     {/* Dropdown Chat List */}
+//     <AnimatePresence initial={false}>
+//       {isOpen && (
+//         <motion.ul
+//           key="chat-list"
+//           initial="closed"
+//           animate="open"
+//           exit="closed"
+//           variants={listVariants}
+//           className="flex flex-col gap-2 overflow-y-auto pr-2 max-h-[calc(100vh-120px)]"
+//         >
+//           {chats.length === 0 ? (
+//             <motion.li
+//               variants={itemVariants}
+//               className="px-2 py-2 text-sm text-slate-400"
+//             >
+//               No chats yet — start one
+//             </motion.li>
+//           ) : (
+//             chats.map((c) => {
+//               const id = getId(c);
+//               const isActive = id && selectedId && id === selectedId;
+//               return (
+//                 <motion.li key={id ?? JSON.stringify(c)} variants={itemVariants}>
+//                   <button
+//                     onClick={() => onSelectChat(id)}
+//                     className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+//                       isActive
+//                         ? "bg-blue-50 border-l-4 border-blue-500 text-blue-700 font-medium shadow-sm"
+//                         : "hover:bg-slate-50 text-slate-700"
+//                     }`}
+//                   >
+//                     {c.title || c.prompt?.slice(0, 40) || "Untitled chat"}
+//                   </button>
+//                 </motion.li>
+//               );
+//             })
+//           )}
+//         </motion.ul>
+//       )}
+//     </AnimatePresence>
+//   </aside>
+// );
+// }
+
+
+# @app.post("/api/new-chat")
+# async def create_new_chat(req: NewChatRequest):
+#     chat_id = str(uuid.uuid4())
+#     chat_doc = {
+#         "chat_id": chat_id,
+#         "userId": req.userId,
+#         "title": "New Chat",
+#         "messages": [],
+#         "created_at": datetime.utcnow(),
+#         "updated_at": datetime.utcnow(),
+#     }
+#     await db["chatSessions"].insert_one(chat_doc)
+#     return {"chat_id": chat_id, "title": "New Chat"}
+
+
+# def serialize_chat(chat):
+#     """Convert MongoDB document ObjectIds to strings for JSON serialization."""
+#     if not chat:
+#         return None
+#     chat["_id"] = str(chat["_id"])
+#     for msg in chat.get("messages", []):
+#         if "_id" in msg and isinstance(msg["_id"], ObjectId):
+#             msg["_id"] = str(msg["_id"])
+#     return chat
+
+
+
+# @app.post("/api/ai-response")
+# async def get_ai_response(req: ChatRequest):
+#     headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+#     payload = {
+#         "model": "groq/compound-mini",
+#         "messages": [{"role": "user", "content": req.prompt}],
+#     }
+
+#     # Generate the AI response
+#     response = requests.post(
+#         "https://api.groq.com/openai/v1/chat/completions",
+#         headers=headers, json=payload
+#     )
+#     data = response.json()
+#     ai_text = data["choices"][0]["message"]["content"]
+
+#     # CASE 1: if chat_id is provided → continue that chat
+#     if req.chat_id:
+#         await db["chatMessages"].update_one(
+#             {"chat_id": req.chat_id, "userId": req.userId},
+#             {"$push": {"messages": {"prompt": req.prompt, "response": ai_text}}}
+#         )
+#         return {"chat_id": req.chat_id, "response": ai_text}
+
+#     # CASE 2: else → create a brand-new chat
+#     title_prompt = f"Summarize this chat into a 1-2 word title: '{req.prompt}'. Only return the title text, nothing else."
+#     title_payload = {
+#         "model": "groq/compound-mini",
+#         "messages": [{"role": "user", "content": title_prompt}],
+#     }
+#     title_resp = requests.post(
+#         "https://api.groq.com/openai/v1/chat/completions",
+#         headers=headers,
+#         json=title_payload
+#     )
+#     title_data = title_resp.json()
+#     chat_title = title_data["choices"][0]["message"]["content"].strip()
+
+#     # Make sure title is unique for this user
+#     existing_titles = await db["chatMessages"].find({"userId": req.userId}, {"title": 1}).to_list(None)
+#     existing_titles = [chat.get("title", "").lower() for chat in existing_titles]
+#     if chat_title.lower() in existing_titles:
+#         suffix = 2
+#         base_title = chat_title
+#         while f"{base_title} {suffix}".lower() in existing_titles:
+#             suffix += 1
+#         chat_title = f"{base_title} {suffix}"
+
+#     chat_doc = {
+#         "chat_id": str(uuid.uuid4()),
+#         "userId": req.userId,
+#         "title": chat_title,
+#         "messages": [{"prompt": req.prompt, "response": ai_text}],
+#         "created_at": datetime.utcnow(),
+#     }
+#     await db["chatMessages"].insert_one(chat_doc)
+
+#     return {
+#         "chat_id": chat_doc["chat_id"],
+#         "userId": req.userId,
+#         "title": chat_title,
+#         "response": ai_text,
+#     }

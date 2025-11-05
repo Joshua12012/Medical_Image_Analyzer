@@ -103,7 +103,7 @@ function App() {
       const data = await res.json();
 
       // Reset state BEFORE any message gets sent
-      setCurrentChatId(data.chat_id); // ensure next messages go to this chat
+      setCurrentChatId(data.chatId); // ensure next messages go to this chat
       setMessages([]);
       setChats((prev) => [data, ...prev]); // add to sidebar
       console.log(data);
@@ -113,7 +113,7 @@ function App() {
     }
   }
 
-  const userId = "abc1";
+  const userId = "abc12";
 
   // handle Enter key
   const handleKeyPress = (e) => {
@@ -299,7 +299,7 @@ function App() {
 
   return (
     <div
-      className="flex h-screen  bg-linear-to-br from-amber-50 via-white to-blue-50"
+      className="flex h-screen w-full overflow-hidden"
       style={{ colorScheme: "light" }}
     >
       {/* ─── Sidebar ─── */}
@@ -419,9 +419,9 @@ function App() {
         </main>
 
         {/* ─── Input Area - CENTERED ─── */}
-        <footer className="shrink-0 px-6 pb-6 pt-4 border-t border-slate-200/60 bg-white/40 backdrop-blur-md">
+        <footer className="shrink-0 px-6 pb-6 pt-4 bg-white/50 backdrop-blur-lg shadow-[0_-2px_10px_rgba(0,0,0,0.05)] transition-all duration-500">
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-center bg-white rounded-2xl border border-slate-300 shadow-md px-3 py-2">
+            <div className="flex items-center bg-white/80 rounded-2xl shadow-md px-3 py-2 backdrop-blur-md">
               {/* Image Upload */}
               <ImageUploader
                 onFileSelect={handleImageUpload}

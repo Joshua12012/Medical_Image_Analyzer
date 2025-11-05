@@ -50,7 +50,7 @@ class ChatRequest(BaseModel):
     
 class NewChatRequest(BaseModel):
     userId: str
-    prompt:str
+    prompt: str | None = None
     chat_id: str | None = None
 class ImgRequest(BaseModel):
     userId: str
@@ -58,15 +58,6 @@ class ImgRequest(BaseModel):
     image_url: str
 
 
-# def serialize_chat(chat):
-#     """Convert MongoDB document ObjectIds to strings for JSON serialization."""
-#     if not chat:
-#         return None
-#     chat["_id"] = str(chat["_id"])
-#     for msg in chat.get("messages", []):
-#         if "_id" in msg and isinstance(msg["_id"], ObjectId):
-#             msg["_id"] = str(msg["_id"])
-#     return chat
 
 def serialize_chat(chat):
     return {
@@ -83,24 +74,12 @@ async def test_connection():
     result = await db["test_collection"].insert_one({"msg": "connected"})
     return {"inserted_id": str(result.inserted_id)}
 
-# @app.post("/api/new-chat")
-# async def create_new_chat(req: NewChatRequest):
-#     chat_id = str(uuid.uuid4())
-#     chat_doc = {
-#         "chat_id": chat_id,
-#         "userId": req.userId,
-#         "title": "New Chat",
-#         "messages": [],
-#         "created_at": datetime.utcnow(),
-#         "updated_at": datetime.utcnow(),
-#     }
-#     await db["chatSessions"].insert_one(chat_doc)
-#     return {"chat_id": chat_id, "title": "New Chat"}
+
 
 @app.post("/api/new-chat")
 async def create_new_chat(req: NewChatRequest):
     chat_id = str(uuid.uuid4())
-    chat_title = req.prompt[:20] or "New Chat"
+    chat_title = "New Chat"
     await db["chatMessages"].insert_one({
         "chat_id": chat_id,
         "userId": req.userId,
@@ -141,69 +120,7 @@ async def search_chats(userId: str, q: str):
     ).to_list(None)
     return {"results": chats}
 
-# @app.post("/api/ai-response")
-# async def get_ai_response(req: ChatRequest):
-#     headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
-#     payload = {
-#         "model": "groq/compound-mini",
-#         "messages": [{"role": "user", "content": req.prompt}],
-#     }
 
-#     # Generate the AI response
-#     response = requests.post(
-#         "https://api.groq.com/openai/v1/chat/completions",
-#         headers=headers, json=payload
-#     )
-#     data = response.json()
-#     ai_text = data["choices"][0]["message"]["content"]
-
-#     # CASE 1: if chat_id is provided → continue that chat
-#     if req.chat_id:
-#         await db["chatMessages"].update_one(
-#             {"chat_id": req.chat_id, "userId": req.userId},
-#             {"$push": {"messages": {"prompt": req.prompt, "response": ai_text}}}
-#         )
-#         return {"chat_id": req.chat_id, "response": ai_text}
-
-#     # CASE 2: else → create a brand-new chat
-#     title_prompt = f"Summarize this chat into a 1-2 word title: '{req.prompt}'. Only return the title text, nothing else."
-#     title_payload = {
-#         "model": "groq/compound-mini",
-#         "messages": [{"role": "user", "content": title_prompt}],
-#     }
-#     title_resp = requests.post(
-#         "https://api.groq.com/openai/v1/chat/completions",
-#         headers=headers,
-#         json=title_payload
-#     )
-#     title_data = title_resp.json()
-#     chat_title = title_data["choices"][0]["message"]["content"].strip()
-
-#     # Make sure title is unique for this user
-#     existing_titles = await db["chatMessages"].find({"userId": req.userId}, {"title": 1}).to_list(None)
-#     existing_titles = [chat.get("title", "").lower() for chat in existing_titles]
-#     if chat_title.lower() in existing_titles:
-#         suffix = 2
-#         base_title = chat_title
-#         while f"{base_title} {suffix}".lower() in existing_titles:
-#             suffix += 1
-#         chat_title = f"{base_title} {suffix}"
-
-#     chat_doc = {
-#         "chat_id": str(uuid.uuid4()),
-#         "userId": req.userId,
-#         "title": chat_title,
-#         "messages": [{"prompt": req.prompt, "response": ai_text}],
-#         "created_at": datetime.utcnow(),
-#     }
-#     await db["chatMessages"].insert_one(chat_doc)
-
-#     return {
-#         "chat_id": chat_doc["chat_id"],
-#         "userId": req.userId,
-#         "title": chat_title,
-#         "response": ai_text,
-#     }
 @app.post("/api/ai-response")
 async def get_ai_response(req: ChatRequest):
     headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
