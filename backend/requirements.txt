@@ -8,3 +8,4 @@ requests
 pymongo
 httpx
 ipykernel
+firebase_admin

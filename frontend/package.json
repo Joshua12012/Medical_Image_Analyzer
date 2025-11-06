@@ -16,11 +16,13 @@
     "@mui/material": "^7.3.4",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.15",
+    "firebase": "^12.5.0",
     "lucide-react": "^0.552.0",
     "motion": "^12.23.24",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.9.5",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1"
   },

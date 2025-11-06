@@ -1,19 +1,20 @@
-from fastapi import FastAPI,HTTPException, UploadFile, File, Form
+from fastapi import FastAPI,HTTPException, UploadFile,Request,Depends, File, Form
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
+from firebase_admin import credentials, initialize_app, auth as firebase_Auth
 import requests, os
 from dotenv import load_dotenv
 from .db_connection import db
 import uuid
 import httpx
 from datetime import datetime
+from typing import Optional
 from bson import ObjectId
 load_dotenv(override=True)
 
 app = FastAPI(title="Chatbot API")
-
 
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
@@ -36,12 +37,26 @@ app.add_middleware(
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_CHAT_URL = "https://api.groq.com/openai/v1/files"
-GROQ_RESPONSES_URL = "https://api.groq.com/openai/v1/responses" 
+GROQ_RESPONSES_URL = "https://api.groq.com/openai/v1/responses"
+
+SERVICE_ACCOUNT = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccountKey.json")
+cred = credentials.Certificate(SERVICE_ACCOUNT)
+initialize_app(cred)
 
 UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
+
+
+
+class UserBase(BaseModel):
+    uid: str
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
+
+class UserResponse(BaseModel):
+    user: UserBase
 
 class ChatRequest(BaseModel):
     userId: str
@@ -68,11 +83,35 @@ def serialize_chat(chat):
         "created_at": str(chat.get("created_at")) if chat.get("created_at") else None
     }
 
+async def verify_token(request: Request):
+    header = request.headers.get("Authorization")
+    if not header or not header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    id_token = header.split(" ", 1)[1]
+    try:
+        decoded = firebase_auth.verify_id_token(id_token)
+        return decoded
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-@app.get("/test")
-async def test_connection():
-    result = await db["test_collection"].insert_one({"msg": "connected"})
-    return {"inserted_id": str(result.inserted_id)}
+@app.post("/api/users", response_model=UserResponse)
+async def create_or_update_user(payload: dict, decoded=Depends(verify_token)):
+    uid = decoded.get("uid")
+    email = decoded.get("email")
+    if not uid:
+        raise HTTPException(status_code=400, detail="Invalid token")
+
+    update = {}
+    if payload.get("username"):
+        update["username"] = payload["username"]
+    if email:
+        update["email"] = email
+    update["uid"] = uid
+
+    await db["users"].update_one({"uid": uid}, {"$set": update}, upsert=True)
+    user = await db["users"].find_one({"uid": uid}, {"_id": 0})
+
+    return {"user": user}
 
 
 
