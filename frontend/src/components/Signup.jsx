@@ -1,6 +1,7 @@
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useState } from "react";
 import { auth } from "../firebase/fireBaseConfig";
+import TextType from "./TextType";
 
 export default function Signup({ onSignupSuccess }) {
   const [email, setEmail] = useState("");
@@ -24,7 +25,22 @@ export default function Signup({ onSignupSuccess }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+      <div className="text-center mb-6">
+              <h1>
+                <TextType
+                  text={[
+                    "Welcome back!",
+                    "Log in to your account",
+                    "Automate with AI",
+                  ]}
+                  typingSpeed={75}
+                  pauseDuration={1500}
+                  showCursor={true}
+                  cursorCharacter="|"
+                />
+              </h1>
+            </div>
       <form
         onSubmit={handleSignup}
         className="flex flex-col gap-3 w-72 p-6 rounded shadow-md"
@@ -60,7 +76,7 @@ export default function Signup({ onSignupSuccess }) {
 
         <button
           type="submit"
-          className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors"
+          className="bg-blue-600 text-black py-2 rounded hover:bg-blue-700 transition-colors"
         >
           Create Account
         </button>

@@ -1,7 +1,8 @@
-import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase/fireBaseConfig";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { auth } from "../firebase/fireBaseConfig";
+import TextType from "./TextType";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -20,9 +21,29 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
+      {/* Animated heading section */}
+
+      <div className="text-center mb-6">
+        <h1>
+          <TextType
+            text={[
+              "Welcome back!",
+              "Log in to your account",
+              "Automate with AI",
+            ]}
+            typingSpeed={75}
+            pauseDuration={1500}
+            showCursor={true}
+            cursorCharacter="|"
+          />
+        </h1>
+      </div>
+
       <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl  w-96">
-        <h2 className="text-2xl text-black font-semibold text-center mb-4">Login</h2>
+        <h2 className="text-2xl text-black font-semibold text-center mb-4">
+          Login
+        </h2>
 
         {error && <p className="text-red-500 text-center mb-3">{error}</p>}
 
@@ -45,7 +66,7 @@ export default function Login() {
 
         <button
           type="submit"
-          className="w-full bg-gray-800 text-white py-2 rounded hover:bg-blue-700"
+          className="w-full bg-gray-800 text-blacl py-2 rounded hover:bg-blue-700"
         >
           Login
         </button>

@@ -33,7 +33,7 @@ function ChatInterface() {
   const [currentChatId, setCurrentChatId] = useState(null);
   const [selectedChatId, setSelectedChatId] = useState(null);
   const [currentChatMessages, setCurrentChatMessages] = useState(null);
-  const [userId, setUserId] = useState(null);
+  // const [userId, setUserId] = useState(null);
 
   // load chats once on mount
   const [user, setUser] = useState(null);
@@ -157,7 +157,7 @@ function ChatInterface() {
         body: JSON.stringify({ userId: user.uid }),
       });
 
-      console.log(userId);
+      console.log(user.uid);
 
       const data = await res.json();
       // Normalize id field - backend might return chatId or chat_id or _id
@@ -202,59 +202,88 @@ function ChatInterface() {
     }
   };
 
-  async function getAIResponse(userId, prompt, chatId) {
-    const res = await fetch(`${BACKEND}/api/ai-response`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.uid, prompt, chat_id: chatId }),
-    });
+  // async function getAIResponse(userId, prompt, chatId) {
+  //   const res = await fetch(`${BACKEND}/api/ai-response`, {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ userId: user.uid, prompt, chat_id: chatId }),
+  //   });
 
-    const data = await res.json();
-    console.log("AI response data:", data);
+  //   const data = await res.json();
+  //   console.log("AI response data:", data);
 
-    // check if backend returned a title
-    if (data.title) {
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.chat_id === chatId
-            ? { ...chat, title: data.title } // update sidebar title dynamically
-            : chat
-        )
-      );
+  //   // check if backend returned a title
+  //   if (data.title) {
+  //     setChats((prev) =>
+  //       prev.map((chat) =>
+  //         chat.chat_id === chatId
+  //           ? { ...chat, title: data.title } // update sidebar title dynamically
+  //           : chat
+  //       )
+  //     );
+  //   }
+
+  //   return data.response;
+  // }
+
+  async function getAIResponse(userId, prompt, chatId = null) {
+    try {
+      const response = await fetch(`${BACKEND}/api/analyze-image-text`, {
+        method: "POST",
+        body: (() => {
+          const formData = new FormData();
+          formData.append("userId", userId);
+          formData.append("prompt", prompt);
+          if (chatId) formData.append("chat_id", chatId);
+          // no image here, just text
+          return formData;
+        })(),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Text AI response:", data);
+
+      // Ensure the returned text is always a clean string
+      return typeof data.response === "string"
+        ? data.response
+        : data.response?.answer ||
+            JSON.stringify(data.response || "No response received", null, 2);
+    } catch (err) {
+      console.error("getAIResponse error:", err);
+      return "Server error. Unable to fetch AI response.";
     }
-
-    return data.response;
   }
 
   async function handleSend() {
     const trimmed = input.trim();
-    // require either text or image
     if ((!trimmed && !file) || isTyping) return;
 
     setIsTyping(true);
 
-    //create a new chat if it doesnt exist
     let activeChatId = currentChatId;
 
-    // 1.If no chat exists, create one first
+    // 1️⃣ Create a new chat if it doesn't exist
     if (!activeChatId) {
       try {
         const res = await fetch("http://localhost:5000/api/new-chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userId: userId, // your logged-in user id
+            userId: user.uid,
             prompt: trimmed,
-            chat_id: currentChatId, // send the first user message to generate title
+            chat_id: currentChatId,
           }),
         });
 
         const data = await res.json();
         activeChatId = data.chatId;
         setCurrentChatId(activeChatId);
-        // setMessages((prev) => [...prev, { sender: "ai", text: data.response }]);
 
-        // If backend returns a new title for this chat, update sidebar
         if (data.title) {
           setChats((prev) =>
             prev.map((c) =>
@@ -269,7 +298,7 @@ function ChatInterface() {
       }
     }
 
-    // Optimistic user message (shows immediately)
+    // 2️⃣ Add user message immediately
     const userMessage = {
       sender: "user",
       text: trimmed || "[Image]",
@@ -280,12 +309,12 @@ function ChatInterface() {
 
     try {
       if (file) {
-        // send image+prompt to analyze-image-text endpoint
+        // 3️⃣ Handle image+text upload
         const formData = new FormData();
-        formData.append("userId", userId); // must match backend name
-        formData.append("prompt", input); // must match backend name
-        formData.append("chat_id", currentChatId || ""); // optional
-        formData.append("image", file); // must exist
+        formData.append("userId", user.uid);
+        formData.append("prompt", trimmed); // use trimmed text instead of input
+        formData.append("chat_id", currentChatId || "");
+        formData.append("image", file);
 
         const res = await fetch(`${BACKEND}/api/analyze-image-text`, {
           method: "POST",
@@ -298,14 +327,14 @@ function ChatInterface() {
         }
 
         const data = await res.json();
-        // data expected: { userId, prompt, response, file_meta: { filename, size, url } }
+        console.log("AI Image Analysis Response:", data);
+
         const serverImageUrl = data.imageUrl
           ? `${BACKEND}${data.imageUrl}`
           : data.file_meta?.url
           ? `${BACKEND}${data.file_meta.url}`
           : null;
 
-        // If backend returns a new title for this chat, update sidebar
         if (data.title) {
           setChats((prev) =>
             prev.map((c) =>
@@ -314,7 +343,7 @@ function ChatInterface() {
           );
         }
 
-        // Replace optimistic local imageUrl with server image url (if available)
+        // replace optimistic image
         if (serverImageUrl) {
           setMessages((prev) => {
             const copy = [...prev];
@@ -328,22 +357,43 @@ function ChatInterface() {
           });
         }
 
-        const aiText = data.response || "No response received";
+        // ✅ Guarantee AI text is always a string
+        const aiText =
+          typeof data.response === "string"
+            ? data.response
+            : data.response?.answer
+            ? data.response.answer
+            : JSON.stringify(data.response || "No response received", null, 2);
+
         setMessages((prev) => [
           ...prev,
           { sender: "ai", text: aiText, imageUrl: null },
         ]);
       } else {
-        // text-only flow: use getAIResponse (assumed to return text)
-        const aiText = await getAIResponse(userId, trimmed, currentChatId);
-        console.log("Active chat ID:", currentChatId);
+        // 4️⃣ Handle text-only messages
+        const result = await getAIResponse(
+          user.uid,
+          currentChatId,
+          trimmed,
+          null
+        );
+        console.log("AI Text Result:", result);
+
+        // ✅ Safe extraction for consistent Markdown rendering
+        const aiText =
+          typeof result === "string"
+            ? result
+            : result?.response ||
+              result?.answer ||
+              JSON.stringify(result, null, 2);
+
         setMessages((prev) => [
           ...prev,
           { sender: "ai", text: aiText, imageUrl: null },
         ]);
       }
 
-      // cleanup preview and file
+      // cleanup
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
         setPreviewUrl(null);
