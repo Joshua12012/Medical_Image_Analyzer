@@ -74,8 +74,8 @@ export default function Sidebar({
           <div className="flex items-baseline overflow-y-auto justify-evenly mb-3">
             <button
               onClick={() => setIsOpen((s) => !s)}
-              className="flex items-center gap-2 text-slate-700 hover:text-slate-900 transition font-semibold"
-              style={{ backgroundColor: "#a7c957" }}
+              className="flex items-center gap-2 text-white hover:text-blue-50 transition font-semibold"
+              style={{ backgroundColor: "#468faf" }}
               aria-expanded={isOpen}
             >
               {isOpen ? (
@@ -87,8 +87,9 @@ export default function Sidebar({
             </button>
             <button
               onClick={onNewChat}
-              className="p-2 rounded-full  bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm"
+              className="p-2 rounded-full text-white shadow-sm"
               title="Start a new chat"
+              style={{ backgroundColor: "#8a817c" }}
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -123,7 +124,7 @@ export default function Sidebar({
                       >
                         <button
                           onClick={() => onSelectChat(id)}
-                          style={{ backgroundColor: "#A997DF" }}
+                          style={{ backgroundColor: "#8a817c" }}
                           className={`w-full text-left text-white px-3 py-2 rounded-lg transition-all ${
                             isActive
                               ? "bg-blue-50 border-l-4 border-b-green-600 text-green-600 font-medium shadow-sm"

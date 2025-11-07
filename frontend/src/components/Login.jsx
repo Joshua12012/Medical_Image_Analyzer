@@ -21,8 +21,8 @@ export default function Login() {
 
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100">
-      <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-md w-96">
-        <h2 className="text-2xl font-semibold text-center mb-4">Login</h2>
+      <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl  w-96">
+        <h2 className="text-2xl text-black font-semibold text-center mb-4">Login</h2>
 
         {error && <p className="text-red-500 text-center mb-3">{error}</p>}
 
@@ -31,7 +31,7 @@ export default function Login() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-2 mb-3 border rounded"
+          className="w-full p-2 mb-3 text-black border rounded"
           required
         />
         <input
@@ -39,18 +39,18 @@ export default function Login() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-2 mb-4 border rounded"
+          className="w-full p-2 mb-4 text-black border rounded"
           required
         />
 
         <button
           type="submit"
-          className="w-full bg-gray-800 text-black py-2 rounded hover:bg-blue-700"
+          className="w-full bg-gray-800 text-white py-2 rounded hover:bg-blue-700"
         >
           Login
         </button>
 
-        <p className="text-sm text-center mt-4">
+        <p className="text-black text-center mt-4">
           Don’t have an account?{" "}
           <span
             onClick={() => navigate("/signup")}

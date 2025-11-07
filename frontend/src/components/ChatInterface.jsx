@@ -1,4 +1,5 @@
 // .jsx
+import { onAuthStateChanged } from "firebase/auth";
 import { AnimatePresence, motion } from "framer-motion";
 import "highlight.js/styles/github.css";
 import { Send } from "lucide-react";
@@ -32,25 +33,57 @@ function ChatInterface() {
   const [currentChatId, setCurrentChatId] = useState(null);
   const [selectedChatId, setSelectedChatId] = useState(null);
   const [currentChatMessages, setCurrentChatMessages] = useState(null);
-  const [user, setUser] = useState(null);
   const [userId, setUserId] = useState(null);
 
   // load chats once on mount
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   useEffect(() => {
-    const u = auth.currentUser;
-    if (u) {
-      setUserId(u.uid);
-      loadChats(u.uid);
-    } else {
-      const unsubscribe = auth.onAuthStateChanged((user) => {
-        if (user) {
-          setUserId(user.uid);
-          loadChats(user.uid);
-        }
-      });
-      return () => unsubscribe();
+    // 1) Load cached user from localStorage once (if present)
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        setUser(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn("Failed to parse stored user:", e);
     }
+
+    // 2) Subscribe to Firebase auth state changes
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        // Compose a lightweight profile object
+        const profile = {
+          username: u.displayName || u.email?.split("@")[0] || "User",
+          uid: u.uid,
+          email: u.email || null,
+        };
+
+        setUser(profile);
+        try {
+          localStorage.setItem("user", JSON.stringify(profile));
+        } catch (e) {
+          console.warn("Failed to persist user to localStorage:", e);
+        }
+      } else {
+        // logged out
+        setUser(null);
+        try {
+          localStorage.removeItem("user");
+        } catch {}
+      }
+      setAuthLoading(false);
+    });
+
+    return () => unsub();
   }, []);
+
+  // Fetch chats whenever `user` is set
+  useEffect(() => {
+    if (!user) return; // wait until user exists
+    loadChats(user.uid); // or user.userId, depending on your naming
+  }, [user]);
 
   // 2) loadChats - actually uses fetchUserChats and sets chats
   async function loadChats(uid) {
@@ -113,12 +146,18 @@ function ChatInterface() {
 
   // call when user clicks on new chat
   async function handleNewChat() {
+    if (!user?.uid) {
+      console.error("No user logged in");
+      return;
+    }
     try {
       const res = await fetch(`${BACKEND}/api/new-chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId: user.uid }),
       });
+
+      console.log(userId);
 
       const data = await res.json();
       // Normalize id field - backend might return chatId or chat_id or _id
@@ -128,11 +167,12 @@ function ChatInterface() {
         title: data.title || "New chat",
         ...data,
       };
+      console.log(newChat);
 
       setCurrentChatId(normalizedId);
       setMessages([]);
       setChats((prev) => [newChat, ...prev]);
-      console.log("New chat created:", normalizedId);
+      console.log("New chat created:", newChat.chat_id);
     } catch (err) {
       console.error("Error creating chat:", err);
     }
@@ -166,7 +206,7 @@ function ChatInterface() {
     const res = await fetch(`${BACKEND}/api/ai-response`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, prompt, chat_id: chatId }),
+      body: JSON.stringify({ userId: user.uid, prompt, chat_id: chatId }),
     });
 
     const data = await res.json();
@@ -337,7 +377,10 @@ function ChatInterface() {
       <div className="flex flex-col flex-1 justify-center-safe  bg-white/40">
         {/* ─── Messages Area ─── */}
         <main className="flex-1 overflow-y-auto px-6 py-8">
-          <ProfileMenu username={"U"} />
+          <ProfileMenu
+            username={user && user.username ? user.username : "Guest"}
+          />
+
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Empty State (no messages yet) - CENTERED */}
             {messages.length === 0 && !isTyping && (
