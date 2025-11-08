@@ -264,13 +264,12 @@ function ChatInterface() {
     if ((!trimmed && !file) || isTyping) return;
 
     setIsTyping(true);
-
     let activeChatId = currentChatId;
 
-    // 1️⃣ Create a new chat if it doesn't exist
+    // 1️⃣ Create a new chat if none exists
     if (!activeChatId) {
       try {
-        const res = await fetch("http://localhost:5000/api/new-chat", {
+        const res = await fetch(`${BACKEND}/api/new-chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -298,7 +297,7 @@ function ChatInterface() {
       }
     }
 
-    // 2️⃣ Add user message immediately
+    // 2️⃣ Show user’s message instantly
     const userMessage = {
       sender: "user",
       text: trimmed || "[Image]",
@@ -308,92 +307,71 @@ function ChatInterface() {
     setInput("");
 
     try {
-      if (file) {
-        // 3️⃣ Handle image+text upload
-        const formData = new FormData();
-        formData.append("userId", user.uid);
-        formData.append("prompt", trimmed); // use trimmed text instead of input
-        formData.append("chat_id", currentChatId || "");
-        formData.append("image", file);
+      // 3️⃣ Always call Lightning AI (Qwen) API for both text and image
+      const formData = new FormData();
+      formData.append("userId", user.uid);
+      formData.append("prompt", trimmed);
+      formData.append("chat_id", activeChatId || "");
 
-        const res = await fetch(`${BACKEND}/api/analyze-image-text`, {
-          method: "POST",
-          body: formData,
-        });
+      // Append image only if selected
+      if (file) formData.append("image", file);
 
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `HTTP ${res.status}`);
-        }
+      const res = await fetch(`${BACKEND}/api/analyze-image-text`, {
+        method: "POST",
+        body: formData,
+      });
 
-        const data = await res.json();
-        console.log("AI Image Analysis Response:", data);
-
-        const serverImageUrl = data.imageUrl
-          ? `${BACKEND}${data.imageUrl}`
-          : data.file_meta?.url
-          ? `${BACKEND}${data.file_meta.url}`
-          : null;
-
-        if (data.title) {
-          setChats((prev) =>
-            prev.map((c) =>
-              c.chat_id === data.chatId ? { ...c, title: data.title } : c
-            )
-          );
-        }
-
-        // replace optimistic image
-        if (serverImageUrl) {
-          setMessages((prev) => {
-            const copy = [...prev];
-            for (let i = copy.length - 1; i >= 0; i--) {
-              if (copy[i].sender === "user" && copy[i].imageUrl) {
-                copy[i] = { ...copy[i], imageUrl: serverImageUrl };
-                break;
-              }
-            }
-            return copy;
-          });
-        }
-
-        // ✅ Guarantee AI text is always a string
-        const aiText =
-          typeof data.response === "string"
-            ? data.response
-            : data.response?.answer
-            ? data.response.answer
-            : JSON.stringify(data.response || "No response received", null, 2);
-
-        setMessages((prev) => [
-          ...prev,
-          { sender: "ai", text: aiText, imageUrl: null },
-        ]);
-      } else {
-        // 4️⃣ Handle text-only messages
-        const result = await getAIResponse(
-          user.uid,
-          currentChatId,
-          trimmed,
-          null
-        );
-        console.log("AI Text Result:", result);
-
-        // ✅ Safe extraction for consistent Markdown rendering
-        const aiText =
-          typeof result === "string"
-            ? result
-            : result?.response ||
-              result?.answer ||
-              JSON.stringify(result, null, 2);
-
-        setMessages((prev) => [
-          ...prev,
-          { sender: "ai", text: aiText, imageUrl: null },
-        ]);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status}: ${text}`);
       }
 
-      // cleanup
+      const data = await res.json();
+      console.log("AI (Qwen via Lightning) Response:", data);
+
+      // 4️⃣ Handle possible image URL returned by backend
+      const serverImageUrl = data.imageUrl
+        ? `${BACKEND}${data.imageUrl}`
+        : data.file_meta?.url
+        ? `${BACKEND}${data.file_meta.url}`
+        : null;
+
+      if (data.title) {
+        setChats((prev) =>
+          prev.map((c) =>
+            c.chat_id === data.chatId ? { ...c, title: data.title } : c
+          )
+        );
+      }
+
+      // Update message image URL if replaced by server-side version
+      if (serverImageUrl) {
+        setMessages((prev) => {
+          const copy = [...prev];
+          for (let i = copy.length - 1; i >= 0; i--) {
+            if (copy[i].sender === "user" && copy[i].imageUrl) {
+              copy[i] = { ...copy[i], imageUrl: serverImageUrl };
+              break;
+            }
+          }
+          return copy;
+        });
+      }
+
+      // ✅ AI text response handling
+      const aiText =
+        typeof data.response === "string"
+          ? data.response
+          : data.response?.answer
+          ? data.response.answer
+          : JSON.stringify(data.response || "No response received", null, 2);
+
+      setMessages((prev) => [
+        ...prev,
+        { sender: "ai", text: aiText, imageUrl: null },
+      ]);
+
+      // Cleanup preview
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
         setPreviewUrl(null);
@@ -403,7 +381,11 @@ function ChatInterface() {
       console.error("Send error:", err);
       setMessages((prev) => [
         ...prev,
-        { sender: "ai", text: "Server error. See console.", imageUrl: null },
+        {
+          sender: "ai",
+          text: "⚠️ Server error. Check console.",
+          imageUrl: null,
+        },
       ]);
     } finally {
       setIsTyping(false);

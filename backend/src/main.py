@@ -7,7 +7,7 @@ from firebase_admin import credentials, initialize_app, auth as firebase_Auth
 import requests, os
 from dotenv import load_dotenv
 from .db_connection import db
-import uuid, re
+import uuid, re, io
 import httpx
 from datetime import datetime
 from typing import Optional
@@ -362,85 +362,73 @@ async def search_chats(userId: str, q: str):
 
 
 
+LAST_IMAGE_CACHE = {}
 
 @app.post("/api/analyze-image-text")
 async def analyze_image_text(
     userId: str = Form(...),
     prompt: str = Form(...),
     chat_id: str = Form(None),
-    image: UploadFile = File(None)   # <-- image optional now
+    image: UploadFile | None = File(None)
 ):
     try:
-        # ---------- If image provided -> call Lightning inference (your existing pattern) ----------
-        if image is not None:
+        data = {"question": prompt}
+
+        # ✅ Case 1: If new image uploaded, use and cache it
+        if image and image.filename:
+            content = await image.read()
+            LAST_IMAGE_CACHE[userId] = {
+                "filename": image.filename,
+                "bytes": content,
+                "type": image.content_type or "image/jpeg"
+            }
+            files = {"image": (image.filename, content, image.content_type)}
+        
+        # ✅ Case 2: If no new image but user has a cached one, reuse it
+        elif userId in LAST_IMAGE_CACHE:
+            cached = LAST_IMAGE_CACHE[userId]
             files = {
-                "image": (image.filename, await image.read(), image.content_type)
+                "image": (
+                    cached["filename"],
+                    io.BytesIO(cached["bytes"]),
+                    cached["type"]
+                )
             }
-            data = {"question": prompt}
-            lightning_resp = requests.post(
-                f"{LIGHTNING_API_URL}/answer-upload",
-                data=data,
-                files=files,
-                timeout=120
-            )
 
-            if lightning_resp.status_code != 200:
-                raise HTTPException(status_code=lightning_resp.status_code, detail=lightning_resp.text)
-
-            ai_output = lightning_resp.json()
-            raw_answer = ai_output.get("answer", "No answer returned.")
-            ai_text = clean_ai_text(raw_answer)
-
-            # If your Lightning returns extra ids or metadata, you can include them here
-            image_url = ai_output.get("image_path") or None
-
-        # ---------- If no image -> text-only flow using Groq (or whichever text model you use) ----------
+        # ❌ Case 3: No image at all ever uploaded
         else:
-            headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
-            payload = {
-                "model": "groq/compound-mini",
-                "messages": [{"role": "user", "content": prompt}],
-            }
-
-            resp = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=30
+            raise HTTPException(
+                status_code=400,
+                detail="No image available. Please upload an image first."
             )
 
-            if resp.status_code != 200:
-                try:
-                    err = resp.json()
-                    msg = err.get("error", {}).get("message", resp.text)
-                except Exception:
-                    msg = resp.text
-                raise HTTPException(status_code=502, detail=f"Groq error: {msg}")
+        # 🔄 Send to Lightning AI
+        lightning_resp = requests.post(
+            f"{LIGHTNING_API_URL}/answer-upload",
+            data=data,
+            files=files,
+            timeout=120
+        )
 
-            data = resp.json()
-            raw_answer = data["choices"][0]["message"]["content"]
-            ai_text = clean_ai_text(raw_answer)
-            image_url = None
+        if lightning_resp.status_code != 200:
+            raise HTTPException(
+                status_code=lightning_resp.status_code,
+                detail=f"Lightning error: {lightning_resp.text}"
+            )
 
-        # ---------- DB logic: create / append chat session ----------
-        # Replace below pseudocode with your actual DB calls (await db[...] etc.)
-        # Example pseudocode:
-        # chat = await db["chatMessages"].find_one({"chat_id": chat_id, "userId": userId})
-        # if chat: update, else: create new
+        ai_output = lightning_resp.json()
+        raw_answer = (
+            ai_output.get("answer")
+            or ai_output.get("response")
+            or "No answer returned."
+        )
+        ai_text = clean_ai_text(raw_answer)
+        image_url = ai_output.get("image_path") or None
 
+        # Handle chat tracking
         if not chat_id:
             chat_id = str(uuid.uuid4())
-            # create chat document with title and first message
-            # await db["chatMessages"].insert_one({...})
 
-        else:
-            # append to existing chat if present, otherwise create new (as you had before)
-            pass
-
-        # ---------- Optionally generate a short title if needed ----------
-        # (keep your existing title-generation flow if required)
-
-        # ---------- Return unified JSON ----------
         return JSONResponse({
             "chatId": chat_id,
             "userId": userId,
@@ -453,7 +441,9 @@ async def analyze_image_text(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
+
 
 
 
