@@ -10,11 +10,28 @@ from .db_connection import db
 import uuid, re, io
 import httpx
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from bson import ObjectId
+import io
+import inspect
+from motor.motor_asyncio import AsyncIOMotorClient
+import cloudinary
+import cloudinary.uploader
+
+
 load_dotenv(override=True)
 
 app = FastAPI(title="Chatbot API")
+
+
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_SECRET_KEY"),
+    secure=True
+)
+
 
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
@@ -38,15 +55,17 @@ app.add_middleware(
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_CHAT_URL = "https://api.groq.com/openai/v1/files"
 GROQ_RESPONSES_URL = "https://api.groq.com/openai/v1/responses"
-LIGHTNING_API_URL = "https://5000-01k9fns08p6gahsqje98716efk.cloudspaces.litng.ai"
+LIGHTNING_API_URL = "https://8000-01k9fns08p6gahsqje98716efk.cloudspaces.litng.ai/chat"
 
 
 SERVICE_ACCOUNT = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccountKey.json")
 cred = credentials.Certificate(SERVICE_ACCOUNT)
 initialize_app(cred)
 
-UPLOAD_DIR = "./uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+from pathlib import Path
+
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 
@@ -354,6 +373,145 @@ async def search_chats(userId: str, q: str):
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=str(e))
 
+# import aiohttp
+
+# async def upload_to_lightning(image: UploadFile):
+#     """Upload file to Lightning and return URL."""
+#     try:
+#         image_bytes = await image.read()  # read once
+
+#         async with aiohttp.ClientSession() as session:
+#             form = aiohttp.FormData()
+#             form.add_field(
+#                 "file",
+#                 image_bytes,
+#                 filename=image.filename,
+#                 content_type=image.content_type
+#             )
+
+#             async with session.post("https://5000-01k9fns08p6gahsqje98716efk.cloudspaces.litng.ai/answer-upload", data=form) as resp:
+#                 if resp.status != 200:
+#                     detail = await resp.text()
+#                     raise HTTPException(status_code=400, detail=f"Lightning error: {detail}")
+
+#                 data = await resp.json()
+#                 return data.get("url")
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=f"Lightning error: {str(e)}")
+
+
+# import asyncio 
+
+# chats_collection = db["chatMessages"]
+
+# LAST_IMAGE_CACHE = {}
+
+# @app.post("/api/analyze-image-text")
+# async def analyze_image_text(
+#     userId: str = Form(...),
+#     prompt: str = Form(...),
+#     chat_id: str = Form(None),
+#     image: UploadFile | None = File(None)
+# ):
+#     try:
+#         data = {"question": prompt}
+
+#         if image:
+#             image_url = await upload_to_lightning(image)   
+#         # ✅ Case 1: If new image uploaded, use and cache it
+#         if image and image.filename:
+#             content = await image.read()
+#             LAST_IMAGE_CACHE[userId] = {
+#                 "filename": image.filename,
+#                 "bytes": content,
+#                 "type": image.content_type or "image/jpeg"
+#             }
+#             files = {"image": (image.filename, content, image.content_type)}
+        
+#         # ✅ Case 2: If no new image but user has a cached one, reuse it
+#         elif userId in LAST_IMAGE_CACHE:
+#             cached = LAST_IMAGE_CACHE[userId]
+#             files = {
+#                 "image": (
+#                     cached["filename"],
+#                     io.BytesIO(cached["bytes"]),
+#                     cached["type"]
+#                 )
+#             }
+
+#         # ❌ Case 3: No image at all ever uploaded
+#         else:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail="No image available. Please upload an image first."
+#             )
+
+#         # 🔄 Send to Lightning AI
+#         # lightning_resp = requests.post(
+#         #     f"{LIGHTNING_API_URL}/answer-upload",
+#         #     data=data,
+#         #     files=files,
+#         #     timeout=120
+#         # )
+
+#         if lightning_resp.status_code != 200:
+#             raise HTTPException(
+#                 status_code=lightning_resp.status_code,
+#                 detail=f"Lightning error: {lightning_resp.text}"
+#             )
+
+#         ai_output = lightning_resp.json()
+#         raw_answer = (
+#             ai_output.get("answer")
+#             or ai_output.get("response")
+#             or "No answer returned."
+#         )
+#         ai_text = clean_ai_text(raw_answer)
+#         image_url = ai_output.get("image_path") or None
+
+#         # Handle chat tracking
+#         if not chat_id:
+#             chat_id = str(uuid.uuid4())
+            
+#         message_entry = {
+#             "prompt": prompt,
+#             "imageUrl": image_url,
+#             "response": ai_text
+#         }
+        
+        
+#         # --- Check if chat exists ---
+#         existing_chat = await chats_collection.find_one({"chat_id": chat_id, "userId": userId})
+        
+#         if existing_chat:
+#             # ✅ Update existing chat
+#             chats_collection.update_one(
+#                 {"_id": existing_chat["_id"]},
+#                 {"$push": {"messages": message_entry}}
+#             )
+#         else:
+#             # ✅ Insert new chat document
+#             new_chat = {
+#                 "chat_id": chat_id,
+#                 "userId": userId,
+#                 "title": prompt[:30] or "New Chat",
+#                 "messages": [message_entry]
+#             }
+#             chats_collection.insert_one(new_chat)
+
+#         return JSONResponse({
+#             "chatId": chat_id,
+#             "userId": userId,
+#             "prompt": prompt,
+#             "response": ai_text,
+#             "imageUrl": image_url,
+#             "title": prompt[:30] or "New Chat"
+#         })
+
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 
 
@@ -362,87 +520,342 @@ async def search_chats(userId: str, q: str):
 
 
 
+
+
+
+
+from pathlib import Path
+
+import aiohttp, asyncio, io
+
+chats_collection = db["chatMessages"]
 LAST_IMAGE_CACHE = {}
+
+# async def upload_to_lightning(image: UploadFile):
+#     try:
+#         image_bytes = await image.read()
+#         async with aiohttp.ClientSession() as session:
+#             form = aiohttp.FormData()
+#             form.add_field(
+#                 "file",
+#                 image_bytes,
+#                 filename=image.filename,
+#                 content_type=image.content_type
+#             )
+#             async with session.post(f"{LIGHTNING_API_URL}/answer-upload", data=form) as resp:
+#                 if resp.status != 200:
+#                     detail = await resp.text()
+#                     raise HTTPException(status_code=400, detail=f"Lightning error: {detail}")
+#                 data = await resp.json()
+#                 return data
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=f"Lightning error: {str(e)}")
+
+
+# add these imports at top of your FastAPI app file
+
+
+
+
+# mount static files so saved images are accessible at /uploads/<filename>
+# add this once after your `app = FastAPI()` line
+# e.g. app = FastAPI(); app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# -------------------------------------------------------------
+# The endpoint: read the file once, save locally, send to Lightning,
+# store/append to MongoDB and return a consistent response.
+# -------------------------------------------------------------
+chats_collection = db["chatMessages"]  # your existing mongo db collection
+LAST_IMAGE_CACHE = {}  # optional in-memory cache keyed by userId
+
+ # set appropriately
 
 @app.post("/api/analyze-image-text")
 async def analyze_image_text(
     userId: str = Form(...),
     prompt: str = Form(...),
-    chat_id: str = Form(None),
-    image: UploadFile | None = File(None)
+    chat_id: str | None = Form(None),
+    image: UploadFile | None = File(None),
 ):
     try:
-        data = {"question": prompt}
+        # 1) Read/obtain image bytes exactly once
+        image_bytes = None
+        filename = None
+        content_type = None
 
-        # ✅ Case 1: If new image uploaded, use and cache it
         if image and image.filename:
-            content = await image.read()
+            # read once and keep
+            image_bytes = await image.read()
+            filename = Path(image.filename).name  # sanitize filename
+            content_type = image.content_type or "application/octet-stream"
+
+            # cache for this session/user (optional)
             LAST_IMAGE_CACHE[userId] = {
-                "filename": image.filename,
-                "bytes": content,
-                "type": image.content_type or "image/jpeg"
+                "filename": filename,
+                "bytes": image_bytes,
+                "content_type": content_type,
             }
-            files = {"image": (image.filename, content, image.content_type)}
-        
-        # ✅ Case 2: If no new image but user has a cached one, reuse it
+
         elif userId in LAST_IMAGE_CACHE:
             cached = LAST_IMAGE_CACHE[userId]
-            files = {
-                "image": (
-                    cached["filename"],
-                    io.BytesIO(cached["bytes"]),
-                    cached["type"]
-                )
-            }
+            image_bytes = cached["bytes"]
+            filename = cached["filename"]
+            content_type = cached.get("content_type", "application/octet-stream")
 
-        # ❌ Case 3: No image at all ever uploaded
         else:
+            # no image available at all
+            raise HTTPException(
+                status_code=400, detail="No image available. Please upload an image first."
+            )
+
+        # 2) Save locally as fallback BEFORE calling remote API
+        local_filename = f"{uuid.uuid4().hex}_{filename}"
+        local_path = UPLOAD_DIR / local_filename
+        # write bytes to disk
+        with open(local_path, "wb") as f:
+            f.write(image_bytes)
+
+        # Build a local URL path that your frontend can use (ensure StaticFiles is mounted)
+        local_url = f"/uploads/{local_filename}"
+
+        # 3) Prepare multipart/form-data for Lightning
+        # httpx accepts files as: {"image": (filename, content_bytes, content_type)}
+        data = {"question": prompt}
+        files = {"image": (filename, image_bytes, content_type)}
+
+        # 4) Call Lightning (async)
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(LIGHTNING_API_URL, data=data, files=files)
+
+        if resp.status_code != 200:
+            raise HTTPException(
+                status_code=resp.status_code,
+                detail=f"Lightning error: {resp.text}",
+            )
+
+        ai_output = resp.json()  # parsed JSON from Lightning
+        # The remote may return keys "answer" or "response" or nested structure
+        raw_answer = ai_output.get("answer") or ai_output.get("response") or "No answer returned."
+
+        # sanitize/normalize response text (implement your clean_ai_text as you had)
+        try:
+            # if you have a sync clean_ai_text function:
+            ai_text = clean_ai_text(raw_answer)
+        except Exception:
+            # fallback if clean_ai_text is async or fails — keep raw text
+            ai_text = raw_answer if isinstance(raw_answer, str) else str(raw_answer)
+
+        # remote image path (if any) — may be None
+        remote_image_path = ai_output.get("image_path") or ai_output.get("imageUrl") or None
+
+        # prefer remote path if provided, otherwise use our local saved file
+        final_image_url = (f"{remote_image_path}" if remote_image_path else local_url)
+
+        # 5) Create/append message entry for MongoDB
+        if not chat_id:
+            chat_id = str(uuid.uuid4())
+
+        message_entry = {
+            "prompt": prompt,
+            "imageUrl": final_image_url,
+            "response": ai_text,
+        }
+
+        # atomic update: if chat exists append, else insert new doc
+        existing_chat = await chats_collection.find_one({"chat_id": chat_id, "userId": userId})
+        if existing_chat:
+            await chats_collection.update_one(
+                {"_id": existing_chat["_id"]},
+                {"$push": {"messages": message_entry}},
+            )
+        else:
+            new_chat = {
+                "chat_id": chat_id,
+                "userId": userId,
+                "title": prompt[:30] or "New Chat",
+                "messages": [message_entry],
+            }
+            await chats_collection.insert_one(new_chat)
+
+        return JSONResponse(
+            {
+                "chatId": chat_id,
+                "userId": userId,
+                "prompt": prompt,
+                "response": ai_text,
+                "imageUrl": final_image_url,
+                "title": prompt[:30] or "New Chat",
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        # helpful debugging info for your logs; don't leak internals to clients in prod
+        raise HTTPException(status_code=500, detail=f"Server error: {str(exc)}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+async def generate_chat_title(prompt: str, userId: str, db) -> str:
+    """
+    Generate a short, unique chat title using Groq compound-mini model.
+    """
+    title_prompt = f"Summarize this chat into a 1-2 word title: '{prompt}'. Only return the title text."
+    payload = {
+        "model": "groq/compound-mini",
+        "messages": [{"role": "user", "content": title_prompt}],
+    }
+
+    headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+
+    # FIX: Use correct Groq API URL
+    GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+    resp = requests.post(GROQ_API_URL, headers=headers, json=payload)
+    resp.raise_for_status()
+
+    title = resp.json()["choices"][0]["message"]["content"].strip()
+
+    # Ensure uniqueness for this user
+    existing_titles = await db.find({"userId": userId}, {"title": 1}).to_list(None)
+    existing_titles = [c.get("title", "").lower() for c in existing_titles]
+    if title.lower() in existing_titles:
+        suffix = 2
+        base = title
+        while f"{base} {suffix}".lower() in existing_titles:
+            suffix += 1
+        title = f"{base} {suffix}"
+    return title
+
+
+
+async def _save_file_to_local(image_bytes: bytes, filename: str) -> str:
+    """Save uploaded image locally (optional, can keep for cache or fallback)."""
+    local_filename = f"{uuid.uuid4().hex}_{filename}"
+    local_path = UPLOAD_DIR / local_filename
+    with open(local_path, "wb") as f:
+        f.write(image_bytes)
+    return str(local_path)
+
+async def _upload_to_cloudinary(local_path: str) -> str:
+    """Upload local image to Cloudinary and return the public URL."""
+    result = cloudinary.uploader.upload(local_path)
+    return result["secure_url"]
+
+@app.post("/api/chat-connection")
+async def analyze_image_text(
+    userId: str = Form(...),
+    prompt: str = Form(...),
+    chat_id: Optional[str] = Form(None),
+    files: Optional[List[UploadFile]] = File(None)
+):
+    final_title = "New Chat"  # <-- initialize here
+    try:
+        if not files and userId not in LAST_IMAGE_CACHE:
             raise HTTPException(
                 status_code=400,
                 detail="No image available. Please upload an image first."
             )
 
-        # 🔄 Send to Lightning AI
-        lightning_resp = requests.post(
-            f"{LIGHTNING_API_URL}/answer-upload",
-            data=data,
-            files=files,
-            timeout=120
-        )
+        image_urls = []
 
-        if lightning_resp.status_code != 200:
+        # Process uploaded files
+        if files:
+            for f in files:
+                if not getattr(f, "filename", None):
+                    continue
+                image_bytes = await f.read()
+                filename = Path(f.filename).name
+
+                local_path = await _save_file_to_local(image_bytes, filename)
+                public_url = await _upload_to_cloudinary(local_path)
+                image_urls.append(public_url)
+
+                LAST_IMAGE_CACHE[userId] = {
+                    "filename": filename,
+                    "bytes": image_bytes,
+                    "url": public_url
+                }
+
+        # Use cached image if no new files
+        elif userId in LAST_IMAGE_CACHE:
+            image_urls.append(LAST_IMAGE_CACHE[userId]["url"])
+
+        payload = {
+            "question": prompt,
+            "image_paths": image_urls,
+            "session_id": chat_id or str(uuid.uuid4())
+        }
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(LIGHTNING_API_URL, json=payload)
+
+        if resp.status_code != 200:
             raise HTTPException(
-                status_code=lightning_resp.status_code,
-                detail=f"Lightning error: {lightning_resp.text}"
+                status_code=resp.status_code,
+                detail=f"Remote cloud API error: {resp.text}"
             )
 
-        ai_output = lightning_resp.json()
-        raw_answer = (
-            ai_output.get("answer")
-            or ai_output.get("response")
-            or "No answer returned."
-        )
-        ai_text = clean_ai_text(raw_answer)
-        image_url = ai_output.get("image_path") or None
+        cloud_response = resp.json()
+        ai_text = cloud_response.get("assessment") or cloud_response.get("response") or "No answer returned."
+        chat_id = cloud_response.get("session_id") or payload["session_id"]
 
-        # Handle chat tracking
-        if not chat_id:
-            chat_id = str(uuid.uuid4())
-
-        return JSONResponse({
-            "chatId": chat_id,
-            "userId": userId,
+        # -------------------- STORE IN MONGODB --------------------
+        message_entry = {
             "prompt": prompt,
-            "response": ai_text,
-            "imageUrl": image_url,
-            "title": prompt[:30] or "New Chat"
-        })
+            "imageUrl": image_urls[0] if image_urls else None,
+            "response": ai_text
+        }
+
+        existing_chat = await chats_collection.find_one({"chat_id": chat_id, "userId": userId})
+        if existing_chat:
+            await chats_collection.update_one(
+                {"_id": existing_chat["_id"]},
+                {"$push": {"messages": message_entry}}
+            )
+            final_title = existing_chat.get("title", final_title)
+        else:
+            chat_title = await generate_chat_title(prompt, userId, chats_collection)
+            new_chat = {
+                "chat_id": chat_id,
+                "userId": userId,
+                "title": chat_title,
+                "messages": [message_entry]
+            }
+            await chats_collection.insert_one(new_chat)
+            final_title = chat_title
+
+        return JSONResponse(
+            {
+                "chatId": chat_id,
+                "userId": userId,
+                "prompt": prompt,
+                "response": ai_text,
+                "imageUrls": image_urls,
+                "title": final_title
+            }
+        )
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
-
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Server error: {str(exc)}")
 
 
 

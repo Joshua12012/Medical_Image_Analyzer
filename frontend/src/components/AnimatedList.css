@@ -1,0 +1,110 @@
+.scroll-list-container {
+  position: relative;
+  width: 500px;
+}
+
+.scroll-list {
+  display: block;
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 6px; /* small space so content doesn't get hidden by hidden scrollbar */
+  box-sizing: content-box;
+}
+
+.scroll-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scroll-list::-webkit-scrollbar-track {
+  background: #060010;
+}
+
+.scroll-list::-webkit-scrollbar-thumb {
+  background: #271e37;
+  border-radius: 4px;
+}
+
+/* hide native scrollbar on containers that use .no-scrollbar */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.item {
+  padding: 16px;
+  background-color: #170d27;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  background: #1a1a1a;
+  color: #eee;
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.item:hover {
+  background: #2a2a2a;
+}
+
+.item.selected {
+  background-color: #271e37;
+  background: #333;
+  color: white;
+}
+
+.item-text {
+  color: white;
+  margin: 0;
+}
+
+/* small gradient placeholder class - keep removed bottom gradient to avoid odd band */
+.top-gradient {
+  height: 20px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(15, 23, 32, 0.12), transparent);
+  position: relative;
+}
+
+.bottom-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(to top, #060010, transparent);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.scroll-list-container {
+  width: 100%;
+  height: auto;
+  position: relative;
+}
+
+.scroll-list {
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+.item {
+  background: #1a1a1a;
+  color: #eee;
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.item:hover {
+  background: #2a2a2a;
+}
+
+.item.selected {
+  background: #333;
+  color: white;
+}

@@ -9,3 +9,5 @@ pymongo
 httpx
 ipykernel
 firebase_admin
+aiohttp
+cloudinary

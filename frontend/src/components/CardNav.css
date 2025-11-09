@@ -1,0 +1,26 @@
+.cardnav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 36px;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #e6eef8; /* adjust to your theme if needed */
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.cardnav-btn:focus {
+  outline: 2px solid rgba(230, 238, 248, 0.12);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+.cardnav-icon {
+  display: block;
+}
+.cardnav-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: inherit;
+}

@@ -1,22 +1,21 @@
 // src/components/Sidebar.jsx
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, ChevronRight, Plus, X } from "lucide-react";
+import { ChevronDown, Plus, X } from "lucide-react";
 import { useState } from "react";
+import AnimatedList from "./AnimatedList";
+import CardNav from "./CardNav";
 
-/**
- * Sidebar
- * Props:
- *  - chats: array
- *  - onSelectChat: function(chatId)
- *  - onNewChat: function()
- *  - selectedId: currently selected chat_id
- *
- * Behavior:
- *  - Desktop (md+): left column, "Your Chats" header toggles dropdown of chat items
- *    with a staggered slide-down animation (same UX you liked earlier).
- *  - Mobile (<md): hidden by default; a floating button opens a full-screen overlay
- *    panel (blurred background). Selecting a chat will call onSelectChat and close the overlay.
- */
+/*
+  Optional: if you install ReactBits or another animated-list package,
+  uncomment the import line below and the <AnimatedList> wrapper inside the
+  desktop list. Replace the import path if the library exports differently.
+
+  Example (ReactBits):
+  import { AnimatedList } from "react-bits";
+
+  Or if you installed "animated-list" (check package docs):
+  import AnimatedList from "animated-list";
+*/
 
 export default function Sidebar({
   chats = [],
@@ -26,15 +25,55 @@ export default function Sidebar({
 }) {
   const [isOpen, setIsOpen] = useState(true); // dropdown open (desktop)
   const [isMobileOpen, setIsMobileOpen] = useState(false); // overlay open (mobile)
+  // Sidebar.jsx (add near the top)
+  function getChatTitle(c) {
+    if (!c) return "Untitled chat";
 
-  // defensive id extractor (covers chat_id, _id, _id.$oid, id)
+    // If it's already a string
+    if (typeof c.title === "string" && c.title.trim() !== "") return c.title;
+
+    // If title is object with common keys
+    if (c.title && typeof c.title === "object") {
+      // try common fields
+      if (typeof c.title.text === "string" && c.title.text.trim() !== "")
+        return c.title.text;
+      if (typeof c.title.name === "string" && c.title.name.trim() !== "")
+        return c.title.name;
+      if (typeof c.title.title === "string" && c.title.title.trim() !== "")
+        return c.title.title;
+      // otherwise fall back to a short JSON preview
+      try {
+        const s = JSON.stringify(c.title);
+        return s.length > 60 ? s.slice(0, 57) + "…" : s;
+      } catch {
+        return "Untitled chat";
+      }
+    }
+
+    // fallback to prompt
+    if (typeof c.prompt === "string" && c.prompt.trim() !== "") {
+      return c.prompt.length > 60 ? c.prompt.slice(0, 57) + "…" : c.prompt;
+    }
+
+    // last fallback: if messages exist, use first message prompt
+    if (Array.isArray(c.messages) && c.messages[0]?.prompt) {
+      const p = c.messages[0].prompt;
+      return (
+        (typeof p === "string" ? p : JSON.stringify(p)).slice(0, 57) +
+        (p.length > 57 ? "…" : "")
+      );
+    }
+
+    return "Untitled chat";
+  }
+
   const getId = (c) =>
     c?.chat_id ??
     (typeof c?._id === "string" ? c._id : c?._id?.$oid) ??
     c?.id ??
     null;
 
-  // animation variants (staggered dropdown)
+  // keep your staggered list open/close variants
   const listVariants = {
     open: {
       opacity: 1,
@@ -60,7 +99,7 @@ export default function Sidebar({
     open: { opacity: 1, y: 0, transition: { duration: 0.22, ease: "easeOut" } },
     closed: {
       opacity: 0,
-      y: -10,
+      y: -8,
       transition: { duration: 0.18, ease: "easeIn" },
     },
   };
@@ -68,83 +107,92 @@ export default function Sidebar({
   return (
     <>
       {/* ---------- Desktop / tablet sidebar (md+) ---------- */}
-      <div className="flex max-h-screen bg-white/40, bg-white/50 text-foreground">
-        <aside className="hidden md:flex w-72 shrink-0   p-4 flex-col">
+      <div className="flex max-h-screen text-foreground">
+        <aside className="hidden md:flex w-72 shrink-0 p-4 flex-col bg-[#f9f9f9] dark:bg-[#111]">
           {/* Header */}
-          <div className="flex items-baseline overflow-y-auto justify-evenly mb-3">
-            <button
+          <div className="flex items-center justify-between mb-3 gap-2">
+            {/* Icon-only CardNav (hamburger -> X) */}
+            <CardNav
               onClick={() => setIsOpen((s) => !s)}
-              className="flex items-center gap-2 text-white hover:text-blue-50 transition font-semibold"
-              style={{ backgroundColor: "#468faf" }}
-              aria-expanded={isOpen}
-            >
-              {isOpen ? (
-                <ChevronDown className="w-5 h-5" />
-              ) : (
-                <ChevronRight className="w-5 h-5" />
-              )}
-              <span>Your Chats</span>
-            </button>
-            <button
+              open={isOpen}
+              ariaLabel={isOpen ? "Close chats" : "Open chats"}
+            />
+
+            <motion.button
               onClick={onNewChat}
-              className="p-2 rounded-full text-white shadow-sm"
+              className="rounded-full shadow-sm border border-transparent flex items-center justify-center"
               title="Start a new chat"
-              style={{ backgroundColor: "#8a817c" }}
+              initial={false}
+              animate={isOpen ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }}
+              transition={{ type: "spring", stiffness: 300, damping: 24 }}
+              style={{
+                width: 36,
+                height: 36,
+                backgroundColor: "#2b2b2b",
+                color: "#fff",
+                pointerEvents: isOpen ? "auto" : "none",
+              }}
+              aria-hidden={!isOpen}
             >
-              <Plus className="w-4 h-4" />
-            </button>
+              <Plus className="w-4 h-4" style={{stroke:"white"}} />
+            </motion.button>
           </div>
 
-          {/* Animated dropdown chat list */}
-          <AnimatePresence initial={false}>
+          {/* Smooth dropdown -> use motion.ul with staggered motion.li */}
+          <AnimatePresence mode="wait">
             {isOpen && (
-              <motion.ul
-                key="chat-list-desktop"
+              <motion.div
+                key="sidebar"
                 initial="closed"
                 animate="open"
                 exit="closed"
                 variants={listVariants}
-                className="flex flex-col gap-2 overflow-y-auto pr-2 max-h-[calc(100vh-140px)]"
+                className="h-auto max-h-[calc(100vh-120px)] overflow-hidden w-full rounded-md p-1"
+                style={{ willChange: "transform, opacity, height" }}
               >
-                {chats.length === 0 ? (
-                  <motion.li
-                    variants={itemVariants}
-                    className="px-2 py-2 text-sm text-slate-400"
-                  >
-                    No chats yet — start one
-                  </motion.li>
-                ) : (
-                  chats.map((c) => {
+                <AnimatedList
+                  items={chats}
+                  onItemSelect={(item) => {
+                    const id = getId(item);
+                    if (id) onSelectChat(id);
+                  }}
+                  showGradients={false} // keep UI clean when few items
+                  // remove overflow-y-auto to avoid native scrollbar on the sidebar;
+                  // AnimatedList will still scroll internally but we hide its scrollbar
+                  // explicit maxHeight ensures inner scrolling works even while parent animates height
+                  className=""
+                  maxHeight={"calc(100vh - 160px)"}
+                  displayScrollbar={false}
+                  renderItem={(c, idx, isActive) => {
                     const id = getId(c);
-                    const isActive = id && selectedId && id === selectedId;
+                    const title = getChatTitle(c);
+                    // button styling: dark rounded pill, hover and active colors
                     return (
-                      <motion.li
-                        key={id ?? JSON.stringify(c)}
-                        variants={itemVariants}
-                      >
+                      <div className="px-1">
                         <button
                           onClick={() => onSelectChat(id)}
-                          style={{ backgroundColor: "#8a817c" }}
-                          className={`w-full text-left text-white px-3 py-2 rounded-lg transition-all ${
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors duration-150 flex items-center gap-2 ${
                             isActive
-                              ? "bg-blue-50 border-l-4 border-b-green-600 text-green-600 font-medium shadow-sm"
-                              : "hover:bg-slate-50 text-slate-700"
+                              ? "bg-[#111827] text-white font-medium shadow-sm"
+                              : "bg-[#15181b] text-slate-200 hover:bg-[#1f2937]"
                           }`}
+                          style={{ minWidth: 0 }}
                         >
-                          {c.title || c.prompt?.slice(0, 40) || "Untitled chat"}
+                          <span className="truncate">
+                            {title || "Untitled chat"}
+                          </span>
                         </button>
-                      </motion.li>
+                      </div>
                     );
-                  })
-                )}
-              </motion.ul>
+                  }}
+                />
+              </motion.div>
             )}
           </AnimatePresence>
         </aside>
 
         {/* ---------- Mobile overlay / full-screen drawer (<md) ---------- */}
         <div className="md:hidden">
-          {/* Floating open button in top-left (you can restyle/position outside if desired) */}
           <button
             onClick={() => setIsMobileOpen(true)}
             className="fixed top-4 left-4 z-40 p-2 bg-white/90 backdrop-blur-md rounded-full shadow-md border border-white/40"
@@ -156,7 +204,6 @@ export default function Sidebar({
           <AnimatePresence>
             {isMobileOpen && (
               <>
-                {/* backdrop blur + dim */}
                 <motion.div
                   className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
                   initial={{ opacity: 0 }}
@@ -165,7 +212,6 @@ export default function Sidebar({
                   onClick={() => setIsMobileOpen(false)}
                 />
 
-                {/* sliding sheet (from top) - full width */}
                 <motion.aside
                   className="fixed inset-x-0 top-0 z-50 bg-white/95 backdrop-blur-lg p-5 overflow-auto"
                   initial={{ y: "-100%" }}
@@ -180,7 +226,7 @@ export default function Sidebar({
                     <div className="flex items-center gap-2">
                       <button
                         onClick={onNewChat}
-                        className="p-2 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm"
+                        className="p-2 rounded-full bg-gray-900 text-white shadow-sm"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -203,6 +249,8 @@ export default function Sidebar({
                       chats.map((c) => {
                         const id = getId(c);
                         const isActive = id && selectedId && id === selectedId;
+                        const title = getChatTitle(c);
+
                         return (
                           <li key={id ?? JSON.stringify(c)}>
                             <button
@@ -212,13 +260,11 @@ export default function Sidebar({
                               }}
                               className={`w-full text-left px-4 py-3 rounded-xl transition ${
                                 isActive
-                                  ? "bg-gray-500 text-blue-700 shadow-md"
-                                  : "bg-gray-700 hover:bg-slate-200 text-slate-800"
+                                  ? "bg-gray-200 text-[#111] shadow-md"
+                                  : "hover:bg-slate-100 text-slate-900"
                               }`}
                             >
-                              {c.title ||
-                                c.prompt?.slice(0, 40) ||
-                                "Untitled chat"}
+                              {title}
                             </button>
                           </li>
                         );

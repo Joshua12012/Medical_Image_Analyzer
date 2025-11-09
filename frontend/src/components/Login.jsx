@@ -2,6 +2,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase/fireBaseConfig";
+import ElectricBorder from "./ElectricBorder";
 import TextType from "./TextType";
 
 export default function Login() {
@@ -21,7 +22,7 @@ export default function Login() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0b0f13]">
       {/* Animated heading section */}
 
       <div className="text-center mb-6">
@@ -39,48 +40,57 @@ export default function Login() {
           />
         </h1>
       </div>
-
-      <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl  w-96">
-        <h2 className="text-2xl text-black font-semibold text-center mb-4">
-          Login
-        </h2>
-
-        {error && <p className="text-red-500 text-center mb-3">{error}</p>}
-
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-2 mb-3 text-black border rounded"
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-2 mb-4 text-black border rounded"
-          required
-        />
-
-        <button
-          type="submit"
-          className="w-full bg-gray-800 text-blacl py-2 rounded hover:bg-blue-700"
+      <ElectricBorder
+        color="#7df9ff"
+        speed={1}
+        chaos={0.1}
+        thickness={3}
+        style={{ borderRadius: 16 }}
+      >
+        <form
+          onSubmit={handleLogin}
+          className="flex flex-col gap-3 w-72 p-6 rounded shadow-md bg-[#0f1720]"
+          style={{ border: "1px solid rgba(255,255,255,0.03)" }}
         >
-          Login
-        </button>
+          <h2 className="text-xl text-white font-bold text-center">Login</h2>
 
-        <p className="text-black text-center mt-4">
-          Don’t have an account?{" "}
-          <span
-            onClick={() => navigate("/signup")}
-            className="text-blue-600 cursor-pointer hover:underline"
+          {error && <p className="text-red-500 text-center mb-3">{error}</p>}
+
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="border border-gray-700 text-white bg-[#0b1220] p-2 rounded"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="border border-gray-700 text-white bg-[#0b1220] p-2 rounded"
+            required
+          />
+
+          <button
+            type="submit"
+            className="bg-[#2563eb] text-white py-2 rounded"
           >
-            Sign up
-          </span>
-        </p>
-      </form>
+            Login
+          </button>
+
+          <p className="text-white text-center mt-4">
+            Don’t have an account?{" "}
+            <span
+              onClick={() => navigate("/signup")}
+              className="text-blue-600 cursor-pointer hover:underline"
+            >
+              Sign up
+            </span>
+          </p>
+        </form>
+      </ElectricBorder>
     </div>
   );
 }
