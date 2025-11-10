@@ -92,6 +92,8 @@ class ImgRequest(BaseModel):
     userId: str
     prompt: str
     image_url: str
+    
+    
 
 
 
@@ -712,6 +714,87 @@ async def analyze_image_text(
 
 
 
+# async def generate_chat_title(prompt: str, userId: str, db) -> str:
+#     """
+#     Generate a short, unique chat title using Groq compound-mini model.
+#     """
+#     title_prompt = f"Summarize this chat into a 1-2 word title: '{prompt}'. Only return the title text."
+#     payload = {
+#         "model": "groq/compound-mini",
+#         "messages": [{"role": "user", "content": title_prompt}],
+#     }
+
+#     headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+
+#     # FIX: Use correct Groq API URL
+#     GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+#     resp = requests.post(GROQ_API_URL, headers=headers, json=payload)
+#     resp.raise_for_status()
+
+#     title = resp.json()["choices"][0]["message"]["content"].strip()
+
+#     # Ensure uniqueness for this user
+#     existing_titles = await db.find({"userId": userId}, {"title": 1}).to_list(None)
+#     existing_titles = [c.get("title", "").lower() for c in existing_titles]
+#     if title.lower() in existing_titles:
+#         suffix = 2
+#         base = title
+#         while f"{base} {suffix}".lower() in existing_titles:
+#             suffix += 1
+#         title = f"{base} {suffix}"
+#     return title
+
+
+
+# async def _save_file_to_local(image_bytes: bytes, filename: str) -> str:
+#     """Save uploaded image locally (optional, can keep for cache or fallback)."""
+#     local_filename = f"{uuid.uuid4().hex}_{filename}"
+#     local_path = UPLOAD_DIR / local_filename
+#     with open(local_path, "wb") as f:
+#         f.write(image_bytes)
+#     return str(local_path)
+
+# async def _upload_to_cloudinary(local_path: str) -> str:
+#     """Upload local image to Cloudinary and return the public URL."""
+#     result = cloudinary.uploader.upload(local_path)
+#     return result["secure_url"]
+
+
+
+class ChatRequest(BaseModel):
+    userId: str
+    prompt: str
+    chat_id: Optional[str] = None
+    image_paths: Optional[List[str]] = None  # optional, can be empty
+
+# @app.post("/api/chat-connection")
+# async def analyze_image_text(req: ChatRequest):
+#     userId = req.userId
+#     prompt = req.prompt
+#     chat_id = req.chat_id or str(uuid.uuid4())
+#     image_urls = req.image_paths or []
+
+#     payload = {
+#         "question": prompt,
+#         "image_paths": image_urls,
+#         "session_id": chat_id
+#     }
+
+#     async with httpx.AsyncClient(timeout=120.0) as client:
+#         resp = await client.post(LIGHTNING_API_URL, json=payload)
+
+#     cloud_response = resp.json()
+#     ai_text = cloud_response.get("assessment") or cloud_response.get("response") or "No answer returned."
+
+#     return {
+#         "chatId": chat_id,
+#         "userId": userId,
+#         "prompt": prompt,
+#         "response": ai_text,
+#         "imageUrls": image_urls
+#     }
+
 async def generate_chat_title(prompt: str, userId: str, db) -> str:
     """
     Generate a short, unique chat title using Groq compound-mini model.
@@ -743,66 +826,43 @@ async def generate_chat_title(prompt: str, userId: str, db) -> str:
         title = f"{base} {suffix}"
     return title
 
-
-
-async def _save_file_to_local(image_bytes: bytes, filename: str) -> str:
-    """Save uploaded image locally (optional, can keep for cache or fallback)."""
-    local_filename = f"{uuid.uuid4().hex}_{filename}"
-    local_path = UPLOAD_DIR / local_filename
-    with open(local_path, "wb") as f:
-        f.write(image_bytes)
-    return str(local_path)
-
-async def _upload_to_cloudinary(local_path: str) -> str:
-    """Upload local image to Cloudinary and return the public URL."""
-    result = cloudinary.uploader.upload(local_path)
+async def _upload_to_cloudinary(image_bytes: bytes, filename: str) -> str:
+    """Upload image bytes to Cloudinary and return the public URL."""
+    result = cloudinary.uploader.upload(io.BytesIO(image_bytes), folder="chat_images", public_id=uuid.uuid4().hex, resource_type="image")
     return result["secure_url"]
 
+class ChatRequest(BaseModel):
+    userId: str
+    prompt: str
+    chat_id: Optional[str] = None
+    image_paths: Optional[List[str]] = None  # optional, can be empty
+
 @app.post("/api/chat-connection")
-async def analyze_image_text(
-    userId: str = Form(...),
-    prompt: str = Form(...),
-    chat_id: Optional[str] = Form(None),
-    files: Optional[List[UploadFile]] = File(None)
-):
-    final_title = "New Chat"  # <-- initialize here
+async def analyze_image_text(req: ChatRequest):
+    final_title = "New Chat"
     try:
-        if not files and userId not in LAST_IMAGE_CACHE:
-            raise HTTPException(
-                status_code=400,
-                detail="No image available. Please upload an image first."
-            )
+        userId = req.userId
+        prompt = req.prompt
+        # prefer provided chat_id, otherwise generate one
+        chat_id = req.chat_id or str(uuid.uuid4())
 
-        image_urls = []
+        # normalize image list
+        image_urls: List[str] = req.image_paths or []
 
-        # Process uploaded files
-        if files:
-            for f in files:
-                if not getattr(f, "filename", None):
-                    continue
-                image_bytes = await f.read()
-                filename = Path(f.filename).name
+        # if no image URLs provided, try using cache for this user
+        if not image_urls and userId in LAST_IMAGE_CACHE:
+            cached = LAST_IMAGE_CACHE.get(userId)
+            if cached and cached.get("url"):
+                image_urls = [cached["url"]]
 
-                local_path = await _save_file_to_local(image_bytes, filename)
-                public_url = await _upload_to_cloudinary(local_path)
-                image_urls.append(public_url)
-
-                LAST_IMAGE_CACHE[userId] = {
-                    "filename": filename,
-                    "bytes": image_bytes,
-                    "url": public_url
-                }
-
-        # Use cached image if no new files
-        elif userId in LAST_IMAGE_CACHE:
-            image_urls.append(LAST_IMAGE_CACHE[userId]["url"])
-
+        # build payload for remote model API
         payload = {
             "question": prompt,
-            "image_paths": image_urls,
-            "session_id": chat_id or str(uuid.uuid4())
+            "image_paths": image_urls or None,
+            "session_id": chat_id
         }
 
+        # call lightning / remote model
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(LIGHTNING_API_URL, json=payload)
 
@@ -814,9 +874,11 @@ async def analyze_image_text(
 
         cloud_response = resp.json()
         ai_text = cloud_response.get("assessment") or cloud_response.get("response") or "No answer returned."
+        # prefer session_id returned by remote if present
         chat_id = cloud_response.get("session_id") or payload["session_id"]
 
         # -------------------- STORE IN MONGODB --------------------
+        image_urls: List[str] = req.image_paths or []
         message_entry = {
             "prompt": prompt,
             "imageUrl": image_urls[0] if image_urls else None,
@@ -830,6 +892,14 @@ async def analyze_image_text(
                 {"$push": {"messages": message_entry}}
             )
             final_title = existing_chat.get("title", final_title)
+            # If title is still "New Chat", generate a new one
+            if final_title == "New Chat":
+                chat_title = await generate_chat_title(prompt, userId, chats_collection)
+                await chats_collection.update_one(
+                    {"_id": existing_chat["_id"]},
+                    {"$set": {"title": chat_title}}
+                )
+                final_title = chat_title
         else:
             chat_title = await generate_chat_title(prompt, userId, chats_collection)
             new_chat = {
@@ -840,6 +910,14 @@ async def analyze_image_text(
             }
             await chats_collection.insert_one(new_chat)
             final_title = chat_title
+
+        # update LAST_IMAGE_CACHE if client supplied image URLs
+        if image_urls:
+            LAST_IMAGE_CACHE[userId] = {
+                "filename": Path(image_urls[0]).name if image_urls[0] else None,
+                "bytes": None,   # no bytes available for URL-only requests
+                "url": image_urls[0]
+            }
 
         return JSONResponse(
             {
@@ -853,11 +931,26 @@ async def analyze_image_text(
         )
 
     except HTTPException:
+        # preserve explicit HTTPExceptions
         raise
     except Exception as exc:
+        # bubble up as 500 with message for easier debugging
         raise HTTPException(status_code=500, detail=f"Server error: {str(exc)}")
 
+# Serve static endpoint for uploaded image preview (simple version)
 
+
+@app.post("/upload-image/")
+async def upload_image(file: UploadFile = File(...)):  # ← Correct: uses "file"
+    try:
+        content = await file.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="Empty file")
+
+        url = await _upload_to_cloudinary(content, file.filename)
+        return {"url": url, "filename": file.filename}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 
 

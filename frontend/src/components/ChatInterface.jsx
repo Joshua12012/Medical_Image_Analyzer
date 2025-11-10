@@ -699,6 +699,21 @@ function ChatInterface() {
     loadChats(user.uid);
   }, [user]);
 
+  // Save last chat in localStorage
+  useEffect(() => {
+    if (currentChatId) {
+      localStorage.setItem("currentChatId", currentChatId);
+    }
+  }, [currentChatId]);
+
+  // Restore on mount
+  useEffect(() => {
+    const storedChatId = localStorage.getItem("currentChatId");
+    if (storedChatId) {
+      setCurrentChatId(storedChatId);
+    }
+  }, []);
+
   async function loadChats(uid) {
     try {
       if (!uid) return;
@@ -819,71 +834,75 @@ function ChatInterface() {
     );
   }
 
-  // ---- UPDATED handleSend: calls BACKEND + "/chat-connection" ----
   async function handleSend() {
     const trimmed = input.trim();
-    if ((!trimmed && !file) || isTyping) return;
-
+    if (!trimmed && !file) return;
     setIsTyping(true);
+
     let activeChatId = currentChatId;
+    let cloudinaryImageUrl = null;
 
-    // CREATE NEW CHAT if none exists
-    if (!activeChatId) {
+    // === STEP 1: UPLOAD IMAGE TO CLOUDINARY FIRST ===
+    if (file) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      console.log("Uploading image to:", `${BACKEND}/upload-image/`);
+      console.log("File:", file.name, file.type, file.size);
+
       try {
-        // Send to backend /chat-connection (Groq title generated server-side)
-        const fd = new FormData();
-        fd.append("userId", user.uid);
-        fd.append("prompt", trimmed);
-        fd.append("session_id", ""); // let backend assign UUID
-        if (file) fd.append("files", file);
-
-        const res = await fetch(`${BACKEND}/api/chat-connection`, {
+        const uploadRes = await fetch(`${BACKEND}/upload-image/`, {
           method: "POST",
-          body: fd,
+          body: formData,
         });
 
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`HTTP ${res.status}: ${text}`);
+        const text = await uploadRes.text();
+        console.log("Upload response:", uploadRes.status, text);
+
+        if (!uploadRes.ok) {
+          throw new Error(`Upload failed: ${uploadRes.status} ${text}`);
         }
 
-        const data = await res.json();
-        activeChatId = data.chatId;
-        setCurrentChatId(activeChatId);
-
-        // Add new chat to sidebar immediately with Groq-generated title
-        const newChat = {
-          chat_id: activeChatId,
-          title: data.title || "New Chat",
-        };
-        setChats((prev) => [newChat, ...prev]);
+        const uploadData = JSON.parse(text);
+        cloudinaryImageUrl = uploadData.url;
+        console.log("Cloudinary URL:", cloudinaryImageUrl);
       } catch (err) {
-        console.error("Error creating new chat:", err);
+        console.error("Image upload error:", err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: "ai",
+            text: `Failed to upload image: ${err.message}`,
+            imageUrl: null,
+          },
+        ]);
         setIsTyping(false);
         return;
       }
     }
 
-    // Show user message instantly
+    // Show user message immediately
     const userMessage = {
       sender: "user",
       text: trimmed || "[Image]",
-      imageUrl: previewUrl || null,
+      imageUrl: cloudinaryImageUrl || previewUrl, // show preview locally
     };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
 
-    try {
-      // Send the actual request to backend
-      const fd = new FormData();
-      fd.append("userId", user.uid);
-      fd.append("prompt", trimmed);
-      fd.append("session_id", activeChatId);
-      if (file) fd.append("files", file);
+    // === STEP 2: SEND TO /api/chat-connection WITH CLOUDINARY URL ===
+    const payload = {
+      userId: user.uid,
+      prompt: trimmed,
+      chat_id: activeChatId || "",
+      image_paths: cloudinaryImageUrl ? [cloudinaryImageUrl] : [],
+    };
 
+    try {
       const res = await fetch(`${BACKEND}/api/chat-connection`, {
         method: "POST",
-        body: fd,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -892,15 +911,18 @@ function ChatInterface() {
       }
 
       const data = await res.json();
+      activeChatId = data.chatId;
+      setCurrentChatId(activeChatId);
 
-      // Update last AI message
-      const aiText = data.response || "No response returned.";
-      setMessages((prev) => [
-        ...prev,
-        { sender: "ai", text: aiText, imageUrl: null },
-      ]);
+      // Add to sidebar if new chat
+      if (!currentChatId) {
+        setChats((prev) => [
+          { chat_id: activeChatId, title: data.title || "New Chat" },
+          ...prev,
+        ]);
+      }
 
-      // Update chat title in sidebar in case backend returned a new title
+      // Update title if changed
       if (data.title) {
         setChats((prev) =>
           prev.map((c) =>
@@ -909,21 +931,32 @@ function ChatInterface() {
         );
       }
 
-      // Cleanup file & preview
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(null);
-      }
+      // Update message with final Cloudinary URL (in case backend returns one)
+      setMessages((prev) => {
+        const updated = [...prev];
+        const lastUserMsg = updated[updated.length - 2]; // before AI response
+        if (lastUserMsg?.sender === "user" && cloudinaryImageUrl) {
+          lastUserMsg.imageUrl = cloudinaryImageUrl;
+        }
+        return [
+          ...updated,
+          {
+            sender: "ai",
+            text: data.response || "No response returned.",
+            imageUrl: null,
+          },
+        ];
+      });
+
+      // Cleanup
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
       setFile(null);
     } catch (err) {
       console.error("Send error:", err);
       setMessages((prev) => [
         ...prev,
-        {
-          sender: "ai",
-          text: "⚠️ Server error. Check console.",
-          imageUrl: null,
-        },
+        { sender: "ai", text: "Server error. Check console.", imageUrl: null },
       ]);
     } finally {
       setIsTyping(false);

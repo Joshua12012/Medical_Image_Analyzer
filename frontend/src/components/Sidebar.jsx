@@ -1,6 +1,7 @@
 // src/components/Sidebar.jsx
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Plus, X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
+import { PlusIcon } from "@heroicons/react/24/solid";
 import { useState } from "react";
 import AnimatedList from "./AnimatedList";
 import CardNav from "./CardNav";
@@ -120,21 +121,16 @@ export default function Sidebar({
 
             <motion.button
               onClick={onNewChat}
-              className="rounded-full shadow-sm border border-transparent flex items-center justify-center"
+              className="w-9 h-9 rounded-full flex items-center justify-center bg-[#2b2b2b] text-white"
               title="Start a new chat"
               initial={false}
-              animate={isOpen ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }}
+              animate={
+                isOpen ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }
+              }
               transition={{ type: "spring", stiffness: 300, damping: 24 }}
-              style={{
-                width: 36,
-                height: 36,
-                backgroundColor: "#2b2b2b",
-                color: "#fff",
-                pointerEvents: isOpen ? "auto" : "none",
-              }}
               aria-hidden={!isOpen}
             >
-              <Plus className="w-4 h-4" style={{stroke:"white"}} />
+              <PlusIcon className="w-4 h-4 text-white" />
             </motion.button>
           </div>
 
