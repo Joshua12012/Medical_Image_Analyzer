@@ -18,8 +18,8 @@ const AnimatedItem = ({
       initial={{ scale: 0.96, opacity: 0, y: -6 }}
       whileInView={{ scale: 1, opacity: 1, y: 0 }}
       viewport={{ amount: 0.4, once: false }}
-      transition={{ duration: 0.18, delay: delay }}
-      style={{ marginBottom: "0.75rem", cursor: "pointer" }}
+      transition={{ duration: 0.01, delay: delay*0.5, ease:"easeOut" }}
+      style={{ marginBottom: "0.75rem", cursor: "pointer" , willChange:"transform, opacity"}}
     >
       {children}
     </motion.div>

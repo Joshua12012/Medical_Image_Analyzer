@@ -144,7 +144,7 @@ export default function Sidebar({
                 exit="closed"
                 variants={listVariants}
                 className="h-auto max-h-[calc(100vh-120px)] overflow-hidden w-full rounded-md p-1"
-                style={{ willChange: "transform, opacity, height" }}
+                style={{ willChange: " opacity, height" }}
               >
                 <AnimatedList
                   items={chats}

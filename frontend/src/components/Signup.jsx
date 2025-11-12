@@ -31,9 +31,9 @@ export default function Signup({ onSignupSuccess }) {
         <h1>
           <TextType
             text={[
-              "Welcome back!",
-              "Log in to your account",
-              "Automate with AI",
+              "Welcome!",
+              "Create your account now!",
+              "Start Automating with AI",
             ]}
             typingSpeed={75}
             pauseDuration={1500}

@@ -28,6 +28,7 @@ function ChatInterface() {
   const [currentChatMessages, setCurrentChatMessages] = useState(null);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [hoveredIndex, setHoveredIndex] = useState(null);
 
   useEffect(() => {
     try {
@@ -424,6 +425,11 @@ function ChatInterface() {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
                     className={wrapperClass}
+                    onMouseEnter={() => setHoveredIndex(i)}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                    onFocus={() => setHoveredIndex(i)} // keyboard accessible
+                    onBlur={() => setHoveredIndex(null)}
+                    tabIndex={-1} // make div focusable for keyboard users
                   >
                     {/* Avatar */}
                     <div
@@ -436,20 +442,36 @@ function ChatInterface() {
                       {isUser ? "U" : "AI"}
                     </div>
 
-                    {/* Message Bubble (wrap latest AI response with ElectricBorder) */}
-                    {isLatestAi ? (
-                      <ElectricBorder
-                        color="#00b4d8"
-                        speed={0.8}
-                        chaos={0.1}
-                        thickness={3}
-                        style={{ borderRadius: 14 }}
-                      >
-                        {bubbleContent}
-                      </ElectricBorder>
-                    ) : (
-                      bubbleContent
-                    )}
+                    {/* compute dynamic props */}
+                    {(() => {
+                      const isHovered = hoveredIndex === i;
+                      // customize how you map hover to thickness/color
+                      const dynamicThickness = isHovered ? 3 : 3;
+                      const dynamicColor = isHovered ? "#00b4d8" : "#00b4d8";
+                      // optionally change speed/chaos too:
+                      const dynamicSpeed = isHovered ? 1.2 : 0.8;
+                      const dynamicChaos = isHovered ? 0.3 : 0.1;
+
+                      // Message bubble wrapped by ElectricBorder only for the AI bubble you want
+                      if (isLatestAi) {
+                        return (
+                          <ElectricBorder
+                            color={dynamicColor}
+                            thickness={dynamicThickness}
+                            speed={dynamicSpeed}
+                            chaos={dynamicChaos}
+                            style={{
+                              borderRadius: 14,
+                              transition: "all 180ms ease",
+                            }}
+                          >
+                            {bubbleContent}
+                          </ElectricBorder>
+                        );
+                      }
+                      // non-latest AI / user messages just show bubble (but still react to hover if you want)
+                      return bubbleContent;
+                    })()}
                   </motion.div>
                 );
               })}
