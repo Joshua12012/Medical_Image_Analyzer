@@ -1,3 +1,4 @@
 frontend/.env
 backend/.env
 backup.txt
+backend/serviceAccountKey.json
