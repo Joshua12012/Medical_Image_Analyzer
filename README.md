@@ -302,19 +302,3 @@ git commit -m "commit message"
 
 ---
 
-## License
-
-This project is licensed under the MIT License.
-
----
-
-## Support
-
-For issues and questions:
-- Create an issue in the repository
-- Check existing documentation
-- Review closed issues for solutions
-
----
-
-**Built with using React, FastAPI, and MongoDB **
