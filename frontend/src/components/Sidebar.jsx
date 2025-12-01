@@ -1,14 +1,15 @@
 // src/components/Sidebar.jsx — FIXED: USE PROPS FOR MOBILE STATE
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Plus, X , MessageCirclePlus} from "lucide-react";
+import { MessageCirclePlus, Plus, X } from "lucide-react";
 import { useState } from "react";
+import CardNav from "./CardNav";
 
 export default function Sidebar({
   chats = [],
   onSelectChat,
   onNewChat,
   selectedId,
-  isMobileOpen, // From parent
+  isMobileOpen = false, // From parent
   setIsMobileOpen, // From parent
 }) {
   const [isOpen, setIsOpen] = useState(true); // Desktop only
@@ -129,7 +130,7 @@ export default function Sidebar({
           </div>
 
           {/* Smooth dropdown -> use motion.ul with staggered motion.li */}
-          <AnimatePresence mode="wait">
+          <AnimatePresence initial={false} mode="wait">
             {isOpen && (
               <motion.ul
                 key="sidebar"
@@ -137,7 +138,7 @@ export default function Sidebar({
                 animate="open"
                 exit="closed"
                 variants={listVariants}
-                className="h-auto max-h-[calc(100vh-120px)] overflow-y-auto w-full rounded-md p-1 space-y-1"
+                className="h-auto max-h-[calc(100vh-120px)] overflow-y-scroll w-full rounded-md p-1 space-y-1"
                 style={{ willChange: "opacity, height" }}
               >
                 {chats.map((c, idx) => {
@@ -150,6 +151,7 @@ export default function Sidebar({
                       key={id ?? idx}
                       variants={itemVariants}
                       className="px-1"
+                      layout
                     >
                       <button
                         onClick={() => onSelectChat(id)}
@@ -173,15 +175,43 @@ export default function Sidebar({
         </motion.aside>
 
         {/* ---------- Mobile overlay / full-screen drawer (<md) ---------- */}
-        <div className="md:hidden">
+        {/* <div className="md:hidden">
           <button
             onClick={() => setIsMobileOpen(true)}
             className="fixed top-4 left-4 z-40 p-2 bg-black/80 backdrop-blur-md rounded-full shadow-md border border-white/20 text-white"
             aria-label="Open chats"
           >
             <ChevronDown className="w-5 h-5 text-white" />
+          </button> */}
+        <div
+          className={`
+          ${isMobileOpen ? "flex" : "hidden"}   
+          
+          flex-col
+          absolute md:relative        
+          top-0 left-0
+          w-full md:w-72
+          h-full
+          z-30
+          bg-black/60 backdrop-blur-xl 
+          border-r border-white/10
+          p-4
+        `}
+        >
+          {/* Close button visible only on mobile */}
+          {/* <button
+            onClick={() => setIsMobileOpen(true)}
+            className="fixed top-4 left-4 z-40 p-2 bg-black/80 backdrop-blur-md rounded-full shadow-md border border-white/20 text-white"
+            aria-label="Open chats"
+          >
+            <ChevronDown className="w-5 h-5 text-white" />
+          </button>  */}
+          <button
+            className="md:hidden absolute top-4 right-4 text-gray-300"
+            onClick={() => setIsMobileOpen(false)}
+          >
+            <X />
           </button>
-
           <AnimatePresence>
             {isMobileOpen && (
               <>
@@ -201,22 +231,19 @@ export default function Sidebar({
                   transition={{ type: "spring", stiffness: 90, damping: 20 }}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white">
-                      Your Chats
-                    </h3>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={onNewChat}
-                        className="p-2 rounded-full bg-gradient-to-r text-white shadow-lg transition-colors"
-                      >
-                        <Plus className="w-4 h-4 text-white" />
-                      </button>
                       <button
                         onClick={() => setIsMobileOpen(false)}
                         className="p-2 rounded-md text-gray-300 hover:text-white"
                         aria-label="Close chats"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={onNewChat}
+                        className="p-2 rounded-full bg-gradient-to-r text-white shadow-lg transition-colors"
+                      >
+                        <Plus className="w-4 h-4 text-white" />
                       </button>
                     </div>
                   </div>
