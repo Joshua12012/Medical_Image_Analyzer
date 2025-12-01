@@ -13,10 +13,18 @@ app = FastAPI(
     description="A production-ready FastAPI structure with separation of concerns."
 )
 
+
+origins = [
+    # "http://localhost:5173",
+    "http://localhost:5000",
+    "http://localhost:5174",
+]
+
+
 # 2. CORS Middleware Setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

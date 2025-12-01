@@ -13,8 +13,8 @@ export default function CardNav({
       initial={false}
       aria-expanded={open}
       aria-label={ariaLabel}
-      whileTap={{ scale: 0.96 }}
-      transition={{ type: "spring", stiffness: 320, damping: 28 }}
+      whileTap={{ scale: 1 }}
+      transition={{ type: "spring", stiffness: 320, damping: 28}}
     >
       <motion.svg
         viewBox="0 0 24 24"

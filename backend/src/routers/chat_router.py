@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from typing import List, Dict, Any
+import httpx, requests
 
 from ..auth import verify_token
 from ..db_connection import chats_collection
@@ -62,17 +63,32 @@ async def search_chats(userId: str, q: str = Query(..., min_length=1, descriptio
 
 @router.post("/chat-connection")
 async def handle_chat_connection(req: ChatRequest):
-    """
-    Primary endpoint for processing AI chat responses (text/image).
-    The complex logic is delegated to the chat_service.
-    """
     try:
-        # Delegate business logic to the service layer
         result = await chat_service.process_chat_request(req)
         return result
-    except httpx.HTTPError as e:
-        # Catch external API errors (4xx/5xx) explicitly
-        raise HTTPException(status_code=e.response.status_code, detail=f"External API Error: {e.response.text}")
+
+    except httpx.HTTPStatusError as e:
+        # e.response exists here
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=f"External API returned an error: {e.response.text}"
+        )
+
+    except httpx.ReadTimeout:
+        raise HTTPException(
+            status_code=504,
+            detail="External API timed out while waiting for a response."
+        )
+
+    except httpx.RequestError as e:
+        # All other network-level errors
+        raise HTTPException(
+            status_code=502,
+            detail=f"Network error communicating with external API: {str(e)}"
+        )
+
     except Exception as e:
-        # Catch any other unexpected errors
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An unexpected error occurred: {str(e)}"
+        )

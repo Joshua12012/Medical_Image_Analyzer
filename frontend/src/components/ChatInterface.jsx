@@ -11,6 +11,8 @@ import { fetchUserChats } from "../api/chats";
 import { auth } from "../firebase/fireBaseConfig";
 import ElectricBorder from "./ElectricBorder";
 import ImageUploader from "./ImageUploader";
+import { LoaderFive } from "./loader"; // ← ADD THIS LINE
+import Particles from "./Particles";
 import ProfileMenu from "./ProfileMenu";
 import Sidebar from "./Sidebar";
 
@@ -216,8 +218,8 @@ function ChatInterface() {
       const formData = new FormData();
       formData.append("file", file);
 
-      console.log("Uploading image to:", `${BACKEND}/upload-image/`);
-      console.log("File:", file.name, file.type, file.size);
+      // console.log("Uploading image to:", `${BACKEND}/upload-image/`);
+      // console.log("File:", file.name, file.type, file.size);
 
       try {
         const uploadRes = await fetch(`${BACKEND}/upload-image/`, {
@@ -226,7 +228,7 @@ function ChatInterface() {
         });
 
         const text = await uploadRes.text();
-        console.log("Upload response:", uploadRes.status, text);
+        // console.log("Upload response:", uploadRes.status, text);
 
         if (!uploadRes.ok) {
           throw new Error(`Upload failed: ${uploadRes.status} ${text}`);
@@ -234,7 +236,7 @@ function ChatInterface() {
 
         const uploadData = JSON.parse(text);
         cloudinaryImageUrl = uploadData.url;
-        console.log("Cloudinary URL:", cloudinaryImageUrl);
+        // console.log("Cloudinary URL:", cloudinaryImageUrl);
       } catch (err) {
         console.error("Image upload error:", err);
         setMessages((prev) => [
@@ -339,203 +341,278 @@ function ChatInterface() {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#f9f9f9] dark:bg-[#111]  dark:text-[#f1f1f1] transition-colors duration-300">
-      {/* Sidebar */}
-      <Sidebar
-        chats={[...chats]}
-        onSelectChat={handleSelectChat}
-        onNewChat={handleNewChat}
-        selectedId={currentChatId}
-        className="w-72 border-r border-gray-200  bg-white/70 dark:bg-[#111] "
-      />
+    <>
+      <div className="relative flex h-screen w-full bg-black text-white">
+        {/* BIG, GORGEOUS, HIGHLY VISIBLE COSMIC PARTICLES – ONLY WHEN EMPTY */}
+        {messages.length === 0 && !isTyping && (
+          <div className="fixed inset-0 pointer-events-none">
+            <Particles
+              particleColors={["#ffffff", "#ffffff"]}
+              particleCount={350} // fewer but bigger = cleaner & more premium
+              particleSpread={20} // wider spread = deeper space feel
+              speed={0.3} // slow & calm floating
+              particleBaseSize={180} // THIS MAKES THEM BIG AND VISIBLE
+              moveParticlesOnHover={true} // beautiful interaction
+              alphaParticles={true} // soft fade at edges
+              disableRotation={true} // pure glowing orbs, no spinning
+            />
+          </div>
+        )}
 
-      {/* Main Area */}
-      <div className="flex flex-col flex-1 bg-[#f9f9f9] dark:bg-[#111] transition-colors duration-300">
-        {/* Messages Area */}
-        <main className="flex-1 overflow-y-auto px-6 py-8">
-          <ProfileMenu username={user?.username || "Guest"} />
+        {/* Sidebar & Main Content – above particles */}
+        <div className="relative z-10 flex w-full h-full">
+          <Sidebar
+            chats={chats}
+            onSelectChat={handleSelectChat}
+            onNewChat={handleNewChat}
+            selectedId={currentChatId}
+            className="w-72 border-r border-white/5 bg-black/40 backdrop-blur-2xl"
+          />
 
-          <div className="max-w-3xl mx-auto space-y-6">
-            {/* Empty State */}
-            {messages.length === 0 && !isTyping && (
-              <div className="flex items-center justify-center min-h-[60vh] text-center">
-                <div>
-                  <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center bg-gray-200 dark:bg-gray-800 rounded-xl text-2xl">
-                    💬
-                  </div>
-                  <h2 className="text-xl font-semibold mb-2">
-                    Start a new conversation
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Ask me anything — I’m listening.
-                  </p>
-                </div>
-              </div>
-            )}
+          <div className="flex flex-col flex-1">
+            <main className="flex-1 overflow-y-auto px-6 py-8">
+              <ProfileMenu username={user?.username || "Guest"} />
 
-            {/* Chat Messages */}
-            <AnimatePresence mode="popLayout">
-              {messages.map((msg, i) => {
-                const isUser = msg.sender === "user";
-                const isLatestAi = msg.sender === "ai" && i === lastAiIndex;
-                const wrapperClass = `flex gap-3 ${
-                  isUser ? "flex-row-reverse" : "flex-row"
-                }`;
+              <div className="max-w-3xl mx-auto space-y-6">
+                {/* Empty State */}
+                {messages.length === 0 && !isTyping && (
+                  <div className="flex items-center justify-center min-h-[60vh] text-center">
+                    <div>
+                      {/*After (Add a white background and rounded corners to the container):*/}
+                      <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center hover:scale-105 transition-transform duration-300">
+                        <svg
+                          viewBox="0 0 100 100"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-full h-full drop-shadow-lg"
+                        >
+                          {/* 1. Define Gradients for 3D Look */}
+                          <defs>
+                            <linearGradient
+                              id="blueGradient"
+                              x1="50"
+                              y1="0"
+                              x2="50"
+                              y2="100"
+                              gradientUnits="userSpaceOnUse"
+                            >
+                              <stop offset="0%" stopColor="#4dabf7" />{" "}
+                              {/* Light Blue Top */}
+                              <stop offset="100%" stopColor="#2563eb" />{" "}
+                              {/* Dark Blue Bottom */}
+                            </linearGradient>
+                            <filter
+                              id="shadowBlur"
+                              x="-20%"
+                              y="-20%"
+                              width="140%"
+                              height="140%"
+                            >
+                              <feGaussianBlur stdDeviation="2" result="blur" />
+                              <feComposite
+                                in="SourceGraphic"
+                                in2="blur"
+                                operator="over"
+                              />
+                            </filter>
+                          </defs>
 
-                const userBubbleClass = `max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed border transition bg-gray-800 text-white border-gray-700`;
+                          {/* 2. Blue Rounded Square Background */}
+                          <rect
+                            x="5"
+                            y="5"
+                            width="90"
+                            height="90"
+                            rx="28"
+                            fill="url(#blueGradient)"
+                          />
 
-                const aiBubbleClass = `w-full max-w-full md:max-w-[900px] px-4 py-3 rounded-2xl text-sm leading-relaxed border transition bg-gray-100 dark:bg-[#1e1e1e] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100`;
+                          {/* 3. Top Highlight (Glossy Effect) */}
+                          <ellipse
+                            cx="50"
+                            cy="20"
+                            rx="30"
+                            ry="10"
+                            fill="white"
+                            fillOpacity="0.2"
+                          />
 
-                const bubbleContent = isUser ? (
-                  <div className={userBubbleClass}>
-                    {msg.imageUrl && (
-                      <img
-                        src={msg.imageUrl}
-                        alt="uploaded"
-                        className="w-56 h-auto rounded-lg mb-3 object-contain border border-gray-300 dark:border-gray-700"
-                      />
-                    )}
-                    <p className="whitespace-pre-wrap">{msg.text}</p>
-                  </div>
-                ) : (
-                  <div className={aiBubbleClass}>
-                    {msg.imageUrl && (
-                      <img
-                        src={msg.imageUrl}
-                        alt="uploaded"
-                        className="w-56 h-auto rounded-lg mb-3 object-contain border border-gray-300 dark:border-gray-700"
-                      />
-                    )}
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeHighlight]}
-                      >
-                        {msg.text}
-                      </ReactMarkdown>
+                          {/* 4. White Speech Bubble */}
+                          <path
+                            d="M50 25C35 25 23 35 23 48C23 55 27 61 33 65L30 74L42 68C44.5 68.5 47 69 50 69C65 69 77 58 77 48C77 35 65 25 50 25Z"
+                            fill="white"
+                            filter="drop-shadow(0px 4px 2px rgba(0,0,0,0.1))"
+                          />
+
+                          {/* 5. Three Black Dots */}
+                          <circle cx="39" cy="48" r="4" fill="#1a1a1a" />
+                          <circle cx="50" cy="48" r="4" fill="#1a1a1a" />
+                          <circle cx="61" cy="48" r="4" fill="#1a1a1a" />
+                        </svg>
+                      </div>
+                      <h2 className="text-xl font-semibold mb-2">
+                        Start a new conversation
+                      </h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Ask me anything — I’m listening.
+                      </p>
                     </div>
                   </div>
-                );
+                )}
 
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className={wrapperClass}
-                    onMouseEnter={() => setHoveredIndex(i)}
-                    onMouseLeave={() => setHoveredIndex(null)}
-                    onFocus={() => setHoveredIndex(i)} // keyboard accessible
-                    onBlur={() => setHoveredIndex(null)}
-                    tabIndex={-1} // make div focusable for keyboard users
-                  >
-                    {/* Avatar */}
-                    <div
-                      className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm shadow-sm ${
-                        isUser
-                          ? "bg-gray-700 text-white"
-                          : "bg-gray-300 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
-                      }`}
-                    >
-                      {isUser ? "U" : "AI"}
-                    </div>
+                {/* Messages */}
+                <AnimatePresence mode="popLayout">
+                  {messages.map((msg, i) => {
+                    const isUser = msg.sender === "user";
+                    const isLatestAi = msg.sender === "ai" && i === lastAiIndex;
+                    const wrapperClass = `flex gap-3 ${
+                      isUser ? "flex-row-reverse" : "flex-row"
+                    }`;
 
-                    {/* compute dynamic props */}
-                    {(() => {
-                      const isHovered = hoveredIndex === i;
-                      // customize how you map hover to thickness/color
-                      const dynamicThickness = isHovered ? 3 : 3;
-                      const dynamicColor = isHovered ? "#00b4d8" : "#00b4d8";
-                      // optionally change speed/chaos too:
-                      const dynamicSpeed = isHovered ? 1.2 : 0.8;
-                      const dynamicChaos = isHovered ? 0.3 : 0.1;
+                    const userBubbleClass = `max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed border transition bg-gray-800 text-white border-gray-700`;
 
-                      // Message bubble wrapped by ElectricBorder only for the AI bubble you want
-                      if (isLatestAi) {
-                        return (
-                          <ElectricBorder
-                            color={dynamicColor}
-                            thickness={dynamicThickness}
-                            speed={dynamicSpeed}
-                            chaos={dynamicChaos}
-                            style={{
-                              borderRadius: 14,
-                              transition: "all 180ms ease",
-                            }}
+                    const aiBubbleClass = `w-full max-w-full md:max-w-[900px] px-4 py-3 rounded-2xl text-sm leading-relaxed border transition bg-gray-100 dark:bg-[#1e1e1e] border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100`;
+
+                    const bubbleContent = isUser ? (
+                      <div className={userBubbleClass}>
+                        {msg.imageUrl && (
+                          <img
+                            src={msg.imageUrl}
+                            alt="uploaded"
+                            className="w-56 h-auto rounded-lg mb-3 object-contain border border-gray-300 dark:border-gray-700"
+                          />
+                        )}
+                        <p className="whitespace-pre-wrap">{msg.text}</p>
+                      </div>
+                    ) : (
+                      <div className={aiBubbleClass}>
+                        {msg.imageUrl && (
+                          <img
+                            src={msg.imageUrl}
+                            alt="uploaded"
+                            className="w-56 h-auto rounded-lg mb-3 object-contain border border-gray-300 dark:border-gray-700"
+                          />
+                        )}
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
                           >
-                            {bubbleContent}
-                          </ElectricBorder>
-                        );
-                      }
-                      // non-latest AI / user messages just show bubble (but still react to hover if you want)
-                      return bubbleContent;
-                    })()}
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                            {msg.text}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    );
 
-            {/* Typing Indicator */}
-            {isTyping && (
-              <div className="flex gap-3 items-center">
-                <div className="w-8 h-8 rounded-full bg-gray-400 dark:bg-gray-600 animate-pulse" />
-                <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 shadow-sm">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-150" />
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-300" />
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className={wrapperClass}
+                        onMouseEnter={() => setHoveredIndex(i)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                        onFocus={() => setHoveredIndex(i)}
+                        onBlur={() => setHoveredIndex(null)}
+                        tabIndex={-1}
+                      >
+                        {/* Avatar */}
+                        <div
+                          className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm shadow-sm ${
+                            isUser
+                              ? "bg-gray-700 text-white"
+                              : "bg-gray-300 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
+                          }`}
+                        >
+                          {isUser ? "U" : "AI"}
+                        </div>
+
+                        {/* ElectricBorder only for latest AI */}
+                        {(() => {
+                          const isHovered = hoveredIndex === i;
+                          const dynamicThickness = isHovered ? 3 : 3;
+                          const dynamicColor = isHovered
+                            ? "#00b4d8"
+                            : "#00b4d8";
+                          const dynamicSpeed = isHovered ? 1.2 : 0.8;
+                          const dynamicChaos = isHovered ? 0.3 : 0.1;
+
+                          if (isLatestAi) {
+                            return (
+                              <ElectricBorder
+                                color={dynamicColor}
+                                thickness={dynamicThickness}
+                                speed={dynamicSpeed}
+                                chaos={dynamicChaos}
+                                style={{
+                                  borderRadius: 14,
+                                  transition: "all 180ms ease",
+                                }}
+                              >
+                                {bubbleContent}
+                              </ElectricBorder>
+                            );
+                          }
+                          return bubbleContent;
+                        })()}
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+
+                {/* Beautiful Generating Loader */}
+                {isTyping && (
+                  <div className="flex justify-left w-full my-8">
+                    <LoaderFive text="Generating chat..." />
                   </div>
+                )}
+              </div>
+            </main>
+
+            {/* INPUT BAR – ORIGINAL COLOR/STYLE RESTORED */}
+            {/* INPUT BAR – BEAUTIFUL & FINAL */}
+            <footer className="shrink-0 px-6 pb-8 pt-6">
+              <div className="max-w-4xl mx-auto">
+                <div className="flex items-center gap-3 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl px-5 py-4 shadow-2xl ring-1 ring-white/5">
+                  <ImageUploader
+                    onFileSelect={handleImageUpload}
+                    previewUrl={previewUrl}
+                  />
+
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Send a message..."
+                    disabled={isTyping}
+                    className="flex-1 bg-transparent outline-none text-white placeholder-gray-400 text-base px-2"
+                  />
+
+                  {previewUrl && (
+                    <img
+                      src={previewUrl}
+                      alt="preview"
+                      className="w-12 h-12 rounded-xl object-cover border-2 border-cyan-500/50 shadow-lg"
+                    />
+                  )}
+
+                  <button
+                    onClick={handleSend}
+                    disabled={isTyping || (!input.trim() && !file)}
+                    className="p-3.5 rounded-2xl bg-gradient-to-r disabled:opacity-50 transition-all duration-200 transform hover:scale-110 shadow-lg"
+                  >
+                    <Send className="w-5 h-5 text-white" />
+                  </button>
                 </div>
               </div>
-            )}
+            </footer>
           </div>
-        </main>
-
-        {/* Input Area */}
-        <footer className="shrink-0 px-6 pb-6 pt-4 bg-[#111] transition-colors duration-300">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-center bg-[#1a1a1a] border border-gray-700 rounded-xl px-3 py-2 shadow-sm focus-within:ring-1 focus-within:ring-blue-500 transition">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#2a2a2a] hover:bg-[#333] transition">
-                <ImageUploader
-                  onFileSelect={handleImageUpload}
-                  previewUrl={previewUrl}
-                />
-              </div>
-
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Message..."
-                disabled={isTyping}
-                className="flex-1 bg-transparent outline-none text-gray-100 placeholder-gray-500 text-sm px-3"
-                onKeyDown={handleKeyPress}
-              />
-
-              {previewUrl && (
-                <img
-                  src={previewUrl}
-                  alt="preview"
-                  className="w-9 h-9 rounded-md object-cover border border-gray-700 ml-2"
-                />
-              )}
-
-              <button
-                type="submit"
-                onClick={handleSend}
-                disabled={isTyping}
-                className="ml-2 p-2 rounded-lg bg-[#6891FA] hover:bg-[#5479D6] transition flex items-center justify-center"
-                style={{ minWidth: "38px", minHeight: "38px" }}
-              >
-                <Send className="w-5 h-5 text-white" />
-              </button>
-            </div>
-          </div>
-        </footer>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

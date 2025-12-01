@@ -24,3 +24,9 @@
   font-weight: 600;
   color: inherit;
 }
+
+.cardnav-icon path,
+.cardnav-icon rect {
+  fill: currentColor !important; // Force white fill
+  opacity: 1 !important;
+}
