@@ -10,7 +10,7 @@ load_dotenv(override=True)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_CHAT_URL = os.getenv("GROQ_CHAT_URL", "https://api.groq.com/openai/v1/chat/completions") # Use the full URL now
 LIGHTNING_API_URL = os.getenv("LIGHTNING_API_URL")
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb+srv://pomode407_db_user:6UrpibFF7pzCVEnc@cluster0.9iyuphv.mongodb.net/Cluster0?retryWrites=true&w=majority")
 DB_NAME = os.getenv("DB_NAME", "your_default_db")
 
 

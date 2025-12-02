@@ -11,3 +11,5 @@ ipykernel
 firebase_admin
 aiohttp
 cloudinary
+pydantic[email]
+python-multipart
