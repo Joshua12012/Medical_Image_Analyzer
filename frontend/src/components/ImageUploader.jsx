@@ -154,7 +154,7 @@ export default function ImageUploader({
       <button
         type="button"
         onClick={openPicker}
-        className="p-3 rounded-2xl duration-200 hover:scale-110"
+        className="p-3 rounded-2xl duration-200"
         title="Upload image"
         style={{borderRadius:'1.5rem', backgroundColor:'gray'}}
       >

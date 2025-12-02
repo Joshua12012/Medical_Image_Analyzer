@@ -1251,14 +1251,12 @@ function ChatInterface() {
                 </div>
               </div>
             </footer> */}
-           <footer className="px-3 pb-8 pt-3 shrink-0 w-full max-w-full overflow-hidden">
-
-              <div className="max-w-3xl border border-white/10 rounded-4xl px-1 py-3 shadow-2xl ring-1 ring-white/5 mx-auto h-full flex flex-col gap-2 max-h-full overflow-hidden">
-
+            <footer className="px-3 pb-8 pt-3 shrink-0 w-full max-w-full overflow-hidden">
+              <div className="max-w-3xl border border-white/10 rounded-4xl px-1 py-2 shadow-2xl ring-1 ring-white/5 mx-auto h-full flex flex-col gap-2 max-h-full overflow-hidden">
                 {/* ===== Preview row (safe, isolated, no overflow) ===== */}
                 {previewUrl && (
                   <div className="w-full max-w-full flex justify-start overflow-hidden">
-                    <div className="w-20 h-20 rounded-xl overflow-hidden border border-cyan-400 bg-black/40">
+                    <div className="w-20 h-20 rounded-3xl overflow-hidden border border-cyan-400 bg-black/40">
                       <img
                         src={previewUrl}
                         alt="preview"
@@ -1294,7 +1292,7 @@ function ChatInterface() {
                     onClick={handleSend}
                     disabled={isTyping || (!input.trim() && !file)}
                     style={{ borderRadius: "1.5rem", backgroundColor: "white" }}
-                    className="p-3.5 shrink-0 disabled:opacity-50 transition-all duration-200 transform hover:scale-110 shadow-lg"
+                    className="p-3.5 shrink-0 disabled:opacity-50 transition-all duration-200 transform "
                   >
                     <Send className="w-4 h-7 text-black" />
                   </button>
