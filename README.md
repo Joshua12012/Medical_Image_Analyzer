@@ -4,8 +4,7 @@ A full-stack chat application with a React (Vite) frontend, Python (FastAPI) and
 It uses a Search Agent (Tavily Search) + RAG + Fine-tuned VLM for medical analysis.
 
 ---
-<<<<<<< HEAD
-=======
+
 ## Medico-Agent: AI-Powered Medical Analysis
 
 This project includes Medico-Agent, a core component for AI-driven medical image analysis, integrating LangChain, fine-tuned Qwen/Qwen-VLM models, and RAG for knowledge retrieval, with a focus on X-Rays, MRI, and CT scans.
@@ -14,7 +13,6 @@ You can find the Medico-Agent implementation [here](./medico-agent/).
 
 ---
 
->>>>>>> cb40f94 (Updated README.md)
 ## Demo Video
 
 
