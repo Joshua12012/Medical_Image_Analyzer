@@ -250,6 +250,7 @@ Docker Setup
 To containerize both the frontend and backend, use Docker and Docker Compose.
 
 Dockerfiles
+
 **Backend Dockerfile** (Dockerfile)
 ```bash
 # Use official Python image
