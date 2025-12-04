@@ -1,6 +1,7 @@
 # Medical Chat — Frontend + Backend
 
-A full-stack chat application with a React (Vite) frontend and Python (FastAPI) backend. Features include user authentication (Firebase), image upload support, animated UI components, persistent chats, and server-side AI/title handling.
+A full-stack chat application with a React (Vite) frontend, Python (FastAPI) and NoSQL database (MongoDB) backend. Features include user authentication (Firebase), image upload support (CLoudinary), animated UI components (Framer, React Bits, Aceternity UI), persistent chats, and server-side AI/title handling.
+It uses a Search Agent (Tavily Search) + RAG + Fine-tuned VLM for medical analysis.
 
 ---
 
@@ -34,9 +35,9 @@ A full-stack chat application with a React (Vite) frontend and Python (FastAPI) 
 - User and AI message bubbles
 - Image upload support (Cloudinary integration)
 - Custom components:
-  - `ElectricBorder` — Animated border effects
-  - `AnimatedList` — Smooth list transitions
-  - `CardNav` — Navigation cards
+  - `ElectricBorder` - Animated border effects
+  - `AnimatedList` - Smooth list transitions
+  - `Particles` - Dynamic Background
   - `TextType` — Typewriter text effect
 
 ### Media Support
@@ -74,8 +75,6 @@ GOOGLE_APPLICATION_CREDENTIALS=
 # API Keys
 GROQ_API_KEY=
 
-# Security
-SECRET_KEY=change_this_to_a_long_random_string
 ```
 
 ### Frontend Environment Variables
@@ -246,6 +245,106 @@ If chat titles aren't persisting:
 
 ---
 
+## Containerization
+Docker Setup
+To containerize both the frontend and backend, use Docker and Docker Compose.
+
+Dockerfiles
+**Backend Dockerfile** (Dockerfile)
+```bash
+# Use official Python image
+FROM python:3.9-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application files
+COPY src/ ./src/
+COPY .env.local ./src/.env.local
+
+# Expose port
+EXPOSE 5000
+
+# Start FastAPI server
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "5000"]
+```
+
+**Frontend Dockerfile** (Dockerfile)
+```bash
+# Use official Node.js image
+FROM node:16-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+COPY package.json yarn.lock ./
+RUN yarn install
+
+# Copy application files
+COPY . .
+
+# Build frontend
+RUN yarn build
+
+# Expose port
+EXPOSE 5173
+
+# Start frontend server
+CMD ["yarn", "preview", "--host", "0.0.0.0", "--port", "5173"]
+```
+**Docker Compose File** (docker-compose.yml)
+
+```bash
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - DB_NAME=medical_chat_db
+    depends_on:
+      - mongo
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_BACKEND_URL=http://localhost:5000
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+```
+Steps to Run with Docker Compose
+1. Build and start containers:
+```bash
+docker-compose up --build
+```
+2. Access the application:
+   - Frontend: http://localhost:5173
+   - Backend API Docs: http://localhost:5000/docs
+```bash
+docker-compose down
+```
+
+## Deployment Note
+This application has not been deployed because the agent + RAG + fine-tuned model requires GPU access to run and generate outputs in real-time. Deployment would require a GPU-enabled server or cloud instance (e.g., AWS EC2 with GPU, Google Cloud AI Platform).
+
 ## Useful Commands
 
 ### Backend Commands
@@ -283,6 +382,21 @@ npm install <package-name>
 
 # Update dependencies
 npm update
+```
+### Docker Commands
+
+```bash
+# Build and start containers
+docker-compose up --build
+
+# Stop containers
+docker-compose down
+
+# View running containers
+docker ps
+
+# Remove unused images
+docker system prune
 ```
 
 ### Git Commands
