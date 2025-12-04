@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   backend:
     build:
@@ -7,13 +5,12 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     ports:
-      - "8000:8000"
+      - "5000:5000"
     env_file:
-      - ./backend/.env
+      - backend/.env  # Loads your API keys, etc.
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/images:/app/images
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - medinet
 
@@ -21,6 +18,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
+        VITE_FIREBASE_MEASUREMENT_ID: ${VITE_FIREBASE_MEASUREMENT_ID:-}
     container_name: frontend
     ports:
       - "5173:80"

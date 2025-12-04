@@ -1,27 +1,32 @@
-# ---------- STAGE 1: Base ----------
-FROM python:3.12-slim AS base
+# Stage 1: Builder (install dependencies with tools)
+FROM python:3.12-slim AS builder
 
-# Set work directory
 WORKDIR /app
 
-# Install system dependencies (optional, if needed for your packages)
+# Install system deps for native Python packages (e.g., if requirements have C extensions)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first (speeds up rebuilds)
+# Copy and install requirements (caches this layer)
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# Copy all source code
+# Stage 2: Runtime (slim image, no build tools)
+FROM python:3.12-slim AS production
+
+WORKDIR /app
+
+# Copy installed Python deps from builder (no source code yet)
+COPY --from=builder /usr/local /usr/local
+
+# Copy app source code (including serviceAccountKey.json if it's there)
 COPY . .
 
 # Expose port
 EXPOSE 8000
 
-# Run Uvicorn server
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Run with Uvicorn (use --reload only for dev; remove for prod)
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]

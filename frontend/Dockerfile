@@ -1,34 +1,33 @@
-# lightweight node js image, 'AS' names this stage as build
 FROM node:20-alpine AS build
 
-# install dependencies for building (git for private packages if needed) (apk-> alphine package keeper)
-RUN apk add --no-cache git
-
-# sets the working directory
 WORKDIR /app
 
-#copy package metadata first 
-COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
+# Build args (from compose)
+ARG VITE_FIREBASE_API_KEY
+ARG VITE_FIREBASE_AUTH_DOMAIN
+ARG VITE_FIREBASE_PROJECT_ID
+ARG VITE_FIREBASE_STORAGE_BUCKET
+ARG VITE_FIREBASE_MESSAGING_SENDER_ID
+ARG VITE_FIREBASE_APP_ID
+ARG VITE_FIREBASE_MEASUREMENT_ID
 
-# determines which package manager i am using
-RUN npm ci;
+# Set as env for Vite build
+ENV VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY
+ENV VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN
+ENV VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID
+ENV VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET
+ENV VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID
+ENV VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID
+ENV VITE_FIREBASE_MEASUREMENT_ID=$VITE_FIREBASE_MEASUREMENT_ID
 
-# Copy the rest of the source
+RUN apk add --no-cache git
+COPY package*.json ./
+RUN npm ci
 COPY . .
-
-# Build the static assets (ensures NODE_ENV=production)
 RUN npm run build
 
-# stage 2 server with nginx
 FROM nginx:stable-alpine AS production
-
-# Remove default config and add our own nginx config
-RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copy built static files
 COPY --from=build /app/dist /usr/share/nginx/html
-
 EXPOSE 80
-
-CMD ["nginx","-g","daemon off;"]
+CMD ["nginx", "-g", "daemon off;"]

@@ -4,8 +4,8 @@ from pathlib import Path
 
 # Initialize MongoDB client and database instance
 client = AsyncIOMotorClient(MONGODB_URL)
-# db = client[DB_NAME]
-db = client.get_default_database()  
+db = client[DB_NAME]
+# db = client.get_default_database()  
 
 # Collections for easy access
 users_collection = db["users"]
