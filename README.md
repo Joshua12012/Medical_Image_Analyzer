@@ -4,6 +4,13 @@ A full-stack chat application with a React (Vite) frontend, Python (FastAPI) and
 It uses a Search Agent (Tavily Search) + RAG + Fine-tuned VLM for medical analysis.
 
 ---
+## Demo Video
+
+
+https://github.com/user-attachments/assets/8f45e345-5aa8-421e-8143-d7102cb54d41
+
+
+---
 
 ## Table of Contents
 
@@ -414,12 +421,4 @@ git status
 git add .
 git commit -m "commit message"
 ```
----
-
-## Demo Link
-
-You can view a demo of this application using the following link:
-
-[Demo Video](https://drive.google.com/file/d/13jR4k6LDHmeL9hRwit8zMGoetwmBikan/view?usp=sharing)
-
 ---
